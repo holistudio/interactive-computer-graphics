@@ -1,0 +1,194 @@
+// C++ include
+#include <iostream>
+#include <string>
+#include <vector>
+
+// Image writing library
+#define STB_IMAGE_WRITE_IMPLEMENTATION // Do not include this line twice in your project!
+#include "stb_image_write.h"
+#include "utils.h"
+
+// Shortcut to avoid Eigen:: and std:: everywhere, DO NOT USE IN .h
+using namespace std;
+using namespace Eigen;
+
+void part1()
+{
+    std::cout << "Part 1: Writing a grid png image" << std::endl;
+
+    const std::string filename("part1.png");
+    Eigen::MatrixXd M(800,800);
+
+    // Draw a grid, each square has a side of e pixels
+    const int e = 50;
+    const double black = 0;
+    const double white = 1;
+
+    for (unsigned wi = 0; wi<M.cols();++wi)
+        for (unsigned hi = 0; hi < M.rows(); ++hi)
+            M(hi,wi) = (lround(wi / e) % 2) == (lround(hi / e) % 2) ? black : white;
+
+    // Write it in a png image. Note that the alpha channel is reversed to make the white (color = 1) pixels transparent (alhpa = 0)
+    write_matrix_to_png(M,M,M,1.0-M.array(),filename);
+}
+
+void part2()
+{
+    std::cout << "Part 2: Simple ray tracer, one sphere with orthographic projection" << std::endl;
+
+    const std::string filename("part2.png");
+    MatrixXd C = MatrixXd::Zero(800,800); // Store the color
+    MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
+
+    // The camera is orthographic, pointing in the direction -z and covering the unit square (-1,1) in x and y
+    Vector3d origin(-1,1,1);
+    Vector3d x_displacement(2.0/C.cols(),0,0);
+    Vector3d y_displacement(0,-2.0/C.rows(),0);
+
+    // Single light source
+    const Vector3d light_position(-1,1,1);
+
+    for (unsigned i=0;i<C.cols();i++)
+    {
+        for (unsigned j=0;j<C.rows();j++)
+        {
+            // Prepare the ray
+            Vector3d ray_origin = origin + double(i)*x_displacement + double(j)*y_displacement;
+            //Vector3d ray_direction = RowVector3d(0,0,-1);
+
+            // Intersect with the sphere
+            // NOTE: this is a special case of a sphere centered in the origin and for orthographic rays aligned with the z axis
+            Vector2d ray_on_xy(ray_origin(0),ray_origin(1));
+            const double sphere_radius = 0.9;
+
+            if (ray_on_xy.norm()<sphere_radius)
+            {
+                // The ray hit the sphere, compute the exact intersection point
+                Vector3d ray_intersection(ray_on_xy(0),ray_on_xy(1),sqrt(sphere_radius*sphere_radius - ray_on_xy.squaredNorm()));
+
+                // Compute normal at the intersection point
+                Vector3d ray_normal = ray_intersection.normalized();
+
+                // Simple diffuse model
+                C(i,j) = (light_position-ray_intersection).normalized().transpose() * ray_normal;
+
+                // Clamp to zero
+                C(i,j) = max(C(i,j),0.);
+
+                // Disable the alpha mask for this pixel
+                A(i,j) = 1;
+            }
+        }
+    }
+
+    // Save to png
+    write_matrix_to_png(C,C,C,A,filename);
+
+}
+
+void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
+{
+    std::cout << "Task 1: Multiple Spheres" << std::endl;
+    //camera coordinates
+    double l = -1.0;
+    double r = 1.0;
+    double t = 1.0;
+    double b = -1.0;
+    
+    const std::string filename("task1_1.png");
+    MatrixXd C = MatrixXd::Zero(800,800); // Store the color
+    MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
+
+    // The camera is orthographic, pointing in the direction -z and covering the unit square (-1,1) in x and y
+    Vector3d origin(-1,1,0);
+//    Vector3d x_displacement(2.0/C.cols(),0,0);
+//    Vector3d y_displacement(0,-2.0/C.rows(),0);
+    Vector3d x_displacement;
+    Vector3d y_displacement;
+
+    // Single light source
+    const Vector3d light_position(-1,1,-1);
+
+    //for each ray with direction -w
+    for (unsigned i=0;i<C.cols();i++)
+    {
+        for (unsigned j=0;j<C.rows();j++)
+        {
+            // Prepare the ray
+            x_displacement = Vector3d((r-l)*(i+0.5)/C.cols(),0,0);
+            y_displacement = Vector3d(0,(t-b)*(j+0.5)/C.rows(),0);
+            Vector3d ray_origin = origin + x_displacement + y_displacement;
+            Vector3d ray_direction = Vector3d(0,0,-1);
+
+            //For each sphere
+            
+            // Intersect with the sphere
+            Vector2d ray_on_xy(ray_origin(0),ray_origin(1));
+            const double sphere_radius = sphere_radii[0];
+            Vector3d sphere_center(sphere_centers.coeffRef(0, 0),sphere_centers.coeffRef(0, 1),sphere_centers.coeffRef(0, 2));
+            
+            Vector3d e_c = ray_origin - sphere_center;
+            //quadratic equation
+            double a = ray_direction.dot(ray_direction);
+            double b = ray_direction.dot(e_c);
+            double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
+            
+            //discriminant
+            double discriminant = b*b - a*c;
+            
+            double t;
+            
+            if(discriminant>=0)
+            {
+                if(discriminant ==0)
+                {
+                    t = -b/a;
+                }
+                else
+                {
+                    t = (-b - sqrt(discriminant)) / a;
+                    if(t < 0)
+                    {
+                        t = (-b + sqrt(discriminant)) / a;
+                    }
+                    else
+                    {
+                        double t2 = (-b + sqrt(discriminant)) / a;
+                        if (t2>0 && t2<t)
+                        {
+                            t = t2;
+                        }
+                    }
+                }
+            }
+            
+            Vector3d ray_intersection = ray_origin + t * ray_direction;
+            Vector3d ray_normal = ray_intersection.normalized();
+            
+            // Simple diffuse model
+            C(i,j) = (light_position-ray_intersection).normalized().transpose() * ray_normal;
+
+            // Clamp to zero
+            C(i,j) = max(C(i,j),0.);
+
+            // Disable the alpha mask for this pixel
+            A(i,j) = 1;
+
+        }
+    }
+    write_matrix_to_png(C,C,C,A,filename);
+    
+}
+
+int main()
+{
+    part1();
+    part2();
+    vector<float> spheresRadii;
+    MatrixXd spheresCenters(1,3);
+    spheresRadii.push_back(0.9);
+    spheresCenters << 0, 0, -1;
+    task1_1(spheresRadii,spheresCenters);
+
+    return 0;
+}

@@ -100,14 +100,14 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
     MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
 
     // The camera is orthographic, pointing in the direction -z and covering the unit square (-1,1) in x and y
-    Vector3d origin(-1,1,0);
+    Vector3d origin(-1,1,1);
 //    Vector3d x_displacement(2.0/C.cols(),0,0);
 //    Vector3d y_displacement(0,-2.0/C.rows(),0);
     Vector3d x_displacement;
     Vector3d y_displacement;
 
     // Single light source
-    const Vector3d light_position(-1,1,-1);
+    const Vector3d light_position(-1,1,1);
 
     //for each ray with direction -w
     for (unsigned i=0;i<C.cols();i++)
@@ -124,7 +124,7 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
             
             // Intersect with the sphere
             Vector2d ray_on_xy(ray_origin(0),ray_origin(1));
-            const double sphere_radius = sphere_radii[0];
+            const double sphere_radius = sphere_radii[0]; 
             Vector3d sphere_center(sphere_centers.coeffRef(0, 0),sphere_centers.coeffRef(0, 1),sphere_centers.coeffRef(0, 2));
             
             Vector3d e_c = ray_origin - sphere_center;
@@ -154,6 +154,7 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
                     else
                     {
                         double t2 = (-b + sqrt(discriminant)) / a;
+                        std::cout << t << ", " << t2 << std::endl;
                         if (t2>0 && t2<t)
                         {
                             t = t2;
@@ -187,7 +188,7 @@ int main()
     vector<float> spheresRadii;
     MatrixXd spheresCenters(1,3);
     spheresRadii.push_back(0.9);
-    spheresCenters << 0, 0, -1;
+    spheresCenters << 0, 0, 0;
     task1_1(spheresRadii,spheresCenters);
 
     return 0;

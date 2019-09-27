@@ -1,2 +1,0 @@
-#!/bin/sh
-make -C /Users/daniellu/Documents/Daniel/Grad\ School/NYU/PhD/Classes/Fall\ 2019/Interactive\ Computer\ Graphics/Assignments/CS-GY-6533/Assignment_1/build -f /Users/daniellu/Documents/Daniel/Grad\ School/NYU/PhD/Classes/Fall\ 2019/Interactive\ Computer\ Graphics/Assignments/CS-GY-6533/Assignment_1/build/CMakeScripts/ALL_BUILD_cmakeRulesBuildPhase.make$CONFIGURATION OBJDIR=$(basename "$OBJECT_FILE_DIR_normal") all

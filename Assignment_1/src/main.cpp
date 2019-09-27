@@ -100,7 +100,7 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
     MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
 
     // The camera is orthographic, pointing in the direction -z and covering the unit square (-1,1) in x and y
-    Vector3d origin(-1,1,1);
+    Vector3d cam_origin(0,0,1);
 //    Vector3d x_displacement(2.0/C.cols(),0,0);
 //    Vector3d y_displacement(0,-2.0/C.rows(),0);
     Vector3d x_displacement;
@@ -109,21 +109,23 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
     // Single light source
     const Vector3d light_position(-1,1,1);
 
+    // Ray intersection parameter
+    double t1;
+
     //for each ray with direction -w
     for (unsigned i=0;i<C.cols();i++)
     {
         for (unsigned j=0;j<C.rows();j++)
         {
             // Prepare the ray
-            x_displacement = Vector3d((r-l)*(i+0.5)/C.cols(),0,0);
-            y_displacement = Vector3d(0,(t-b)*(j+0.5)/C.rows(),0);
-            Vector3d ray_origin = origin + x_displacement + y_displacement;
+            x_displacement = Vector3d(l+(r-l)*(i)/C.cols(),0,0);
+            y_displacement = Vector3d(0,t-(t-b)*(j)/C.rows(),0);
+            Vector3d ray_origin = cam_origin + x_displacement + y_displacement;
             Vector3d ray_direction = Vector3d(0,0,-1);
 
             //For each sphere
             
             // Intersect with the sphere
-            Vector2d ray_on_xy(ray_origin(0),ray_origin(1));
             const double sphere_radius = sphere_radii[0]; 
             Vector3d sphere_center(sphere_centers.coeffRef(0, 0),sphere_centers.coeffRef(0, 1),sphere_centers.coeffRef(0, 2));
             
@@ -135,45 +137,45 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
             
             //discriminant
             double discriminant = b*b - a*c;
-            
-            double t;
-            
+            //std::cout << discriminant << std::endl;
+
             if(discriminant>=0)
             {
                 if(discriminant ==0)
                 {
-                    t = -b/a;
+                    t1 = -b/a;
                 }
                 else
                 {
-                    t = (-b - sqrt(discriminant)) / a;
-                    if(t < 0)
+                    t1 = (-b - sqrt(discriminant)) / a;
+                    if(t1 < 0)
                     {
-                        t = (-b + sqrt(discriminant)) / a;
+                        t1 = (-b + sqrt(discriminant)) / a;
                     }
                     else
                     {
                         double t2 = (-b + sqrt(discriminant)) / a;
-                        std::cout << t << ", " << t2 << std::endl;
-                        if (t2>0 && t2<t)
+                        //std::cout << t1 << ", " << t2 << std::endl;
+                        if (t2>0 && t2<t1)
                         {
-                            t = t2;
+                            t1 = t2;
                         }
                     }
                 }
+                Vector3d ray_intersection = ray_origin + t1 * ray_direction;
+                Vector3d ray_normal = (ray_intersection-sphere_center)/sphere_radius;
+            
+                // Simple diffuse model
+                C(i,j) = (light_position-ray_intersection).normalized().transpose() * ray_normal;
+
+                // Clamp to zero
+                C(i,j) = max(C(i,j),0.);
+
+                // Disable the alpha mask for this pixel
+                A(i,j) = 1;
             }
             
-            Vector3d ray_intersection = ray_origin + t * ray_direction;
-            Vector3d ray_normal = ray_intersection.normalized();
-            
-            // Simple diffuse model
-            C(i,j) = (light_position-ray_intersection).normalized().transpose() * ray_normal;
 
-            // Clamp to zero
-            C(i,j) = max(C(i,j),0.);
-
-            // Disable the alpha mask for this pixel
-            A(i,j) = 1;
 
         }
     }

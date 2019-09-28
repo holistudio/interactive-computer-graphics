@@ -18,7 +18,9 @@ void part1()
 
     const std::string filename("part1.png");
     Eigen::MatrixXd M(800,800);
-
+    //additional matrices for testing colors of checkerboards
+    MatrixXd Z = MatrixXd::Zero(800,800);
+    MatrixXd ones = MatrixXd::Ones(800,800);
     // Draw a grid, each square has a side of e pixels
     const int e = 50;
     const double black = 0;
@@ -29,7 +31,7 @@ void part1()
             M(hi,wi) = (lround(wi / e) % 2) == (lround(hi / e) % 2) ? black : white;
 
     // Write it in a png image. Note that the alpha channel is reversed to make the white (color = 1) pixels transparent (alhpa = 0)
-    write_matrix_to_png(M,M,M,1.0-M.array(),filename);
+    write_matrix_to_png(M,Z,Z,ones,filename);
 }
 
 void part2()
@@ -352,7 +354,7 @@ void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
 
 int main()
 {
-    //part1();
+    part1();
     //part2();
     vector<float> spheresRadii;
     MatrixXd spheresCenters(3,3);

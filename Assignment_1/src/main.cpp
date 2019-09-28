@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <math.h>
 
 // Image writing library
 #define STB_IMAGE_WRITE_IMPLEMENTATION // Do not include this line twice in your project!
@@ -96,7 +97,7 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
     double r = 1.0;
     double t = 1.0;
     double b = -1.0;
-    
+
     const std::string filename("task1_1.png");
     MatrixXd C = MatrixXd::Zero(800,800); // Store the color
     MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
@@ -134,7 +135,7 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
             for (unsigned k=0;k<sphere_radii.size();k++)
             {
 
-                const double sphere_radius = sphere_radii[k]; 
+                const double sphere_radius = sphere_radii[k];
                 Vector3d sphere_center(sphere_centers.coeffRef(k, 0),sphere_centers.coeffRef(k, 1),sphere_centers.coeffRef(k, 2));
 
                 //Calculate discriminant
@@ -143,7 +144,7 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
                 double a = ray_direction.dot(ray_direction);
                 double b = ray_direction.dot(e_c);
                 double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
-                
+
                 //discriminant
                 double discriminant = b*b - a*c;
 
@@ -177,7 +178,7 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
                         //this must be the first ray hit
                         t1 = t_new;
                         hit_sphere_center = sphere_center;
-                        hit_sphere_radius = sphere_radius; 
+                        hit_sphere_radius = sphere_radius;
                         hit = true;
                     }
                     else
@@ -188,10 +189,10 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
                         {
                             t1 = t_new;
                             hit_sphere_center = sphere_center;
-                            hit_sphere_radius = sphere_radius; 
+                            hit_sphere_radius = sphere_radius;
                         }
                     }
- 
+
                 }
 
             }
@@ -200,7 +201,7 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
             {
                 Vector3d ray_intersection = ray_origin + t1 * ray_direction;
                 Vector3d ray_normal = (ray_intersection-hit_sphere_center)/hit_sphere_radius;
-        
+
                 // Simple diffuse model
                 C(i,j) = (light_position-ray_intersection).normalized().transpose() * ray_normal;
 
@@ -213,10 +214,10 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
 
         }
     }
-    write_matrix_to_png(C,C,C,A,filename);   
+    write_matrix_to_png(C,C,C,A,filename);
 }
 
-void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd sphere_colors)
+void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd sphere_colors, vector<char> sphere_shading)
 {
     //this function alternates between diffuse shading and specular shading
     //e.g sphere 1 gets diffuse shading, sphere 2 gets specular, sphere 3 gets diffuse...
@@ -226,9 +227,8 @@ void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
     double r = 1.0;
     double t = 1.0;
     double b = -1.0;
-    
+
     const std::string filename("task1_2.png");
-    MatrixXd C = MatrixXd::Zero(800,800); // Store the light intensity
     MatrixXd R = MatrixXd::Zero(800,800); // Store the red
     MatrixXd G = MatrixXd::Zero(800,800); // green
     MatrixXd B = MatrixXd::Zero(800,800); // blue
@@ -249,19 +249,20 @@ void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
     double t_new = 0;
     bool hit = false;
 
-    //hit sphere (cx, cy, cz, R)
+    //hit sphere properties
     double hit_sphere_radius;
     Vector3d hit_sphere_center;
     Vector3d hit_sphere_color;
+    char hit_sphere_shading;
 
     // For each ray with direction -w
-    for (unsigned i=0;i<C.cols();i++)
+    for (unsigned i=0;i<R.cols();i++)
     {
-        for (unsigned j=0;j<C.rows();j++)
+        for (unsigned j=0;j<R.rows();j++)
         {
             // Prepare the ray
-            x_displacement = Vector3d(l+(r-l)*(i)/C.cols(),0,0);
-            y_displacement = Vector3d(0,t-(t-b)*(j)/C.rows(),0);
+            x_displacement = Vector3d(l+(r-l)*(i)/R.cols(),0,0);
+            y_displacement = Vector3d(0,t-(t-b)*(j)/R.rows(),0);
             Vector3d ray_origin = cam_origin + x_displacement + y_displacement;
             Vector3d ray_direction = Vector3d(0,0,-1);
             hit = false;
@@ -269,7 +270,7 @@ void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
             // For each sphere
             for (unsigned k=0;k<sphere_radii.size();k++)
             {
-                const double sphere_radius = sphere_radii[k]; 
+                const double sphere_radius = sphere_radii[k];
                 Vector3d sphere_center(sphere_centers.coeffRef(k, 0),sphere_centers.coeffRef(k, 1),sphere_centers.coeffRef(k, 2));
 
                 //Calculate discriminant
@@ -278,7 +279,7 @@ void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
                 double a = ray_direction.dot(ray_direction);
                 double b = ray_direction.dot(e_c);
                 double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
-                
+
                 //discriminant
                 double discriminant = b*b - a*c;
 
@@ -311,8 +312,9 @@ void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
                         //this must be the first ray hit
                         t1 = t_new;
                         hit_sphere_center = sphere_center;
-                        hit_sphere_radius = sphere_radius; 
+                        hit_sphere_radius = sphere_radius;
                         hit_sphere_color = Vector3d(sphere_colors.row(k));
+                        hit_sphere_shading = sphere_shading[k];
                         hit = true;
                     }
                     else
@@ -323,8 +325,9 @@ void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
                         {
                             t1 = t_new;
                             hit_sphere_center = sphere_center;
-                            hit_sphere_radius = sphere_radius; 
+                            hit_sphere_radius = sphere_radius;
                             hit_sphere_color = Vector3d(sphere_colors.row(k));
+                            hit_sphere_shading = sphere_shading[k];
                         }
                     }
                 }
@@ -337,20 +340,29 @@ void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
                 Vector3d ray_intersection = ray_origin + t1 * ray_direction;
                 Vector3d ray_normal = (ray_intersection-hit_sphere_center)/hit_sphere_radius;
                 double color_intensity=0.0;
-                
+
                 //for each light source
                 for(unsigned m=0;m<light_positions.rows();m++)
                 {
-                    // Simple diffuse model assuming diffuse coefficient kd = 1 and light intensity I=1
-                    color_intensity = (Vector3d(light_positions.row(m))-ray_intersection).normalized().transpose() * ray_normal;
+                    // Simple diffuse model assuming light intensity I=1
+                    Vector3d light_vector = (Vector3d(light_positions.row(m))-ray_intersection).normalized();
+                    color_intensity = light_vector.transpose() * ray_normal;
                     // Clamp to zero
                     color_intensity = max(color_intensity,0.);
+
+                    //Specular shading, assuming Phong exponent p=100
+                    if(hit_sphere_shading=='s')
+                    {
+                        Vector3d half_vector=(-ray_direction+light_vector).normalized();
+                        color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
+                    }
                     R(i,j) = R(i,j)+color_intensity;
                     G(i,j) = G(i,j)+color_intensity;
                     B(i,j) = B(i,j)+color_intensity;
                 }
 
                 //adjust RGB based on the hit sphere's color
+                //assume kd and ks are same, based on RGB values provided in arguments
                 R(i,j)=R(i,j)*hit_sphere_color.coeff(0)/255;
                 G(i,j)=G(i,j)*hit_sphere_color.coeff(1)/255;
                 B(i,j)=B(i,j)*hit_sphere_color.coeff(2)/255;
@@ -361,7 +373,7 @@ void task1_2(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
 
         }
     }
-    write_matrix_to_png(R,G,B,A,filename);   
+    write_matrix_to_png(R,G,B,A,filename);
 }
 
 int main()
@@ -377,10 +389,14 @@ int main()
                       0.2, -0.2, 1.0,
                       0.5,0.5,0.5;
     //task1_1(spheresRadii,spheresCenters);
-    MatrixXd spheresColors(3,3); //in RGB
-    spheresColors << 66, 135, 245,
+    MatrixXd spheres_colors(3,3); //in RGB
+    spheres_colors << 66, 135, 245,
                      0, 255, 166,
                      237, 0, 206;
-    task1_2(spheresRadii,spheresCenters,spheresColors);
+    vector<char> sphere_shading;
+    sphere_shading.push_back('d');
+    sphere_shading.push_back('s');
+    sphere_shading.push_back('d');
+    task1_2(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
     return 0;
 }

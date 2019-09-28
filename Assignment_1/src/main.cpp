@@ -88,7 +88,7 @@ void part2()
 
 void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
 {
-    std::cout << "Task 1: Multiple Spheres" << std::endl;
+    std::cout << "Task 1.1: Multiple Spheres" << std::endl;
     //camera coordinates
     double l = -1.0;
     double r = 1.0;
@@ -100,15 +100,21 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
     MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
 
     // The camera is orthographic, pointing in the direction -z and covering the unit square (-1,1) in x and y
-    Vector3d cam_origin(0,0,1);
+    Vector3d cam_origin(0,0,2);
     Vector3d x_displacement;
     Vector3d y_displacement;
 
     // Single light source
-    const Vector3d light_position(-1,1,1);
+    const Vector3d light_position(-0.8,1,1.2);
 
     // Ray intersection parameter
-    double t1;
+    double t1 = 0;
+    double t_new = 0;
+    bool hit = false;
+
+    //hit sphere (cx, cy, cz, R)
+    double hit_sphere_radius;
+    Vector3d hit_sphere_center;
 
     // For each ray with direction -w
     for (unsigned i=0;i<C.cols();i++)
@@ -120,46 +126,79 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
             y_displacement = Vector3d(0,t-(t-b)*(j)/C.rows(),0);
             Vector3d ray_origin = cam_origin + x_displacement + y_displacement;
             Vector3d ray_direction = Vector3d(0,0,-1);
+            hit = false;
 
             // For each sphere
-            const double sphere_radius = sphere_radii[0]; 
-            Vector3d sphere_center(sphere_centers.coeffRef(0, 0),sphere_centers.coeffRef(0, 1),sphere_centers.coeffRef(0, 2));
-            
-            //Sphere intersection
-            Vector3d e_c = ray_origin - sphere_center;
-            //quadratic equation
-            double a = ray_direction.dot(ray_direction);
-            double b = ray_direction.dot(e_c);
-            double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
-            
-            //discriminant
-            double discriminant = b*b - a*c;
-
-            if(discriminant>=0)
+            for (unsigned k=0;k<sphere_radii.size();k++)
             {
-                if(discriminant ==0)
+
+                const double sphere_radius = sphere_radii[k]; 
+                Vector3d sphere_center(sphere_centers.coeffRef(k, 0),sphere_centers.coeffRef(k, 1),sphere_centers.coeffRef(k, 2));
+
+                //Calculate discriminant
+                Vector3d e_c = ray_origin - sphere_center;
+                //quadratic equation
+                double a = ray_direction.dot(ray_direction);
+                double b = ray_direction.dot(e_c);
+                double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
+                
+                //discriminant
+                double discriminant = b*b - a*c;
+
+                if(discriminant>=0)
                 {
-                    t1 = -b/a;
-                }
-                else
-                {
-                    t1 = (-b - sqrt(discriminant)) / a;
-                    if(t1 < 0)
+                    //if discriminant is greater than or equal to 0
+                    //Calculate sphere intersection parameter, t_new
+                    if(discriminant ==0)
                     {
-                        t1 = (-b + sqrt(discriminant)) / a;
+                        t_new = -b/a;
                     }
                     else
                     {
-                        double t2 = (-b + sqrt(discriminant)) / a;
-                        if (t2>0 && t2<t1)
+                        t_new = (-b - sqrt(discriminant)) / a;
+                        if(t_new < 0)
                         {
-                            t1 = t2;
+                            t_new = (-b + sqrt(discriminant)) / a;
+                        }
+                        else
+                        {
+                            double t2 = (-b + sqrt(discriminant)) / a;
+                            if (t2>0 && t2<t_new)
+                            {
+                                t_new = t2;
+                            }
                         }
                     }
+
+                    if(hit == false)
+                    {
+                        //this must be the first ray hit
+                        t1 = t_new;
+                        hit_sphere_center = sphere_center;
+                        hit_sphere_radius = sphere_radius; 
+                        hit = true;
+                    }
+                    else
+                    {
+                        //this means there's already a hit from another sphere
+                        //If that t is less than stored t, then replace stored t with the new t
+                        if(t_new<t1)
+                        {
+                            t1 = t_new;
+                            hit_sphere_center = sphere_center;
+                            hit_sphere_radius = sphere_radius; 
+                        }
+                    }
+ 
                 }
+
+            }
+            //if hit is true, then do lighting calculations
+            if (hit == true)
+            {
                 Vector3d ray_intersection = ray_origin + t1 * ray_direction;
-                Vector3d ray_normal = (ray_intersection-sphere_center)/sphere_radius;
-            
+                Vector3d ray_normal = (ray_intersection-hit_sphere_center)/hit_sphere_radius;
+        
                 // Simple diffuse model
                 C(i,j) = (light_position-ray_intersection).normalized().transpose() * ray_normal;
 
@@ -169,8 +208,6 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
                 // Disable the alpha mask for this pixel
                 A(i,j) = 1;
             }
-            
-
 
         }
     }
@@ -180,13 +217,17 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
 
 int main()
 {
-    part1();
-    part2();
+    //part1();
+    //part2();
     vector<float> spheresRadii;
-    MatrixXd spheresCenters(1,3);
+    MatrixXd spheresCenters(3,3);
     spheresRadii.push_back(0.9);
-    spheresCenters << 0, 0, 0;
-    task1_1(spheresRadii,spheresCenters);
+    spheresRadii.push_back(0.3);
+    spheresRadii.push_back(0.4);
+    spheresCenters << 0, 0, 0,
+                      0.2, -0.2, 1.0,
+                      0.5,0.5,0.5;
+    //task1_1(spheresRadii,spheresCenters);
 
     return 0;
 }

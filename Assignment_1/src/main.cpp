@@ -13,6 +13,15 @@
 using namespace std;
 using namespace Eigen;
 
+class tri_mesh
+{
+    public:
+        //V is a float array (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
+        MatrixXf V;
+        //F is an integer array (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
+        MatrixXi F;
+};
+
 void part1()
 {
     std::cout << "Part 1: Writing a grid png image" << std::endl;
@@ -533,6 +542,30 @@ void task1_3(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
         }
     }
     write_matrix_to_png(R,G,B,A,filename);
+}
+
+tri_mesh load_mesh(string off_filepath)
+{
+    //returns a triangule mesh object at the file path for the OFF file
+    tri_mesh mesh_structure;
+    
+    //read the first line
+    //if the first line says 'OFF' continue
+        //then read the next line that doesn't start with '#'
+        //store first number to num_vertices
+        int num_vertices;
+        //store second number to num_faces
+        int num_faces;
+        for (unsigned i=0;i<num_vertices;i++)
+        {
+            //load matrix V with vertices
+        }
+        for (unsigned i=0;i<num_faces;i++)
+        {
+            //load matrix V with vertices
+        }
+    //otherwise exit with output "Invalid file (not OFF file)"
+    return mesh_structure;
 }
 
 int main()

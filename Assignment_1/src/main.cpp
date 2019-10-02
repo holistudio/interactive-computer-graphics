@@ -23,6 +23,10 @@ struct tri_mesh
     MatrixXi F;
 };
 
+std::ostream& operator<<(std::ostream &strm, const tri_mesh &a) {
+  return strm << "Vertices\n" << a.V << "\nFaces\n" << a.F;
+}
+
 void part1()
 {
     std::cout << "Part 1: Writing a grid png image" << std::endl;
@@ -580,7 +584,7 @@ vector<string> space_sep_string(string line)
     return substrings;
 }
 
-void load_mesh(string off_filepath)
+tri_mesh load_mesh(string off_filepath)
 {
     // returns a triangule mesh object at the file path for the OFF file
     tri_mesh mesh_structure;
@@ -595,8 +599,6 @@ void load_mesh(string off_filepath)
     bool summary_line_read = false;
     vector<string> substrings;
 
-    MatrixXf vertices;
-    MatrixXi faces;
     //read the first line
     in.getline(str,255);
 
@@ -616,33 +618,31 @@ void load_mesh(string off_filepath)
             }
         }
 
-        vertices.resize(num_vertices,3);
-        faces.resize(num_faces,3);
+        //vertices.resize(num_vertices,3);
+        mesh_structure.V.resize(num_vertices,3);
+        mesh_structure.F.resize(num_faces,3);
 
         for (unsigned i=0;i<num_vertices;i++)
         {
             //load matrix V with vertices
             in.getline(str,255);
             substrings = space_sep_string(string(str));
-            vertices.row(i) << stof(substrings[0]),stof(substrings[1]),stof(substrings[2]);
+            mesh_structure.V.row(i) << stof(substrings[0]),stof(substrings[1]),stof(substrings[2]);
         }
-        //mesh_structure.V = vertices;
-        std::cout << "Vertex Matrix" << std::endl;
-        std::cout << vertices << std::endl;
+
         for (unsigned i=0;i<num_faces;i++)
         {
             in.getline(str,255);
             substrings = space_sep_string(string(str));
-            faces.row(i) << stoi(substrings[2]),stoi(substrings[3]),stoi(substrings[4]);
+            mesh_structure.F.row(i) << stoi(substrings[2]),stoi(substrings[3]),stoi(substrings[4]);
         }
-        std::cout << "Face Matrix" << std::endl;
-        std::cout << faces << std::endl;
-        //return mesh_structure;
+        return mesh_structure;
     }
     else
     {
         //otherwise exit with output "Invalid file (not OFF file)"
         std::cout << "Invalid file (not OFF file)" << std::endl;
+        return mesh_structure;
     }
 }
 
@@ -669,6 +669,7 @@ int main()
     sphere_shading.push_back('s');
     //task1_2(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
     //task1_3(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
-    load_mesh("../data/cube.off");
+    tri_mesh test_mesh = load_mesh("../data/cube.off");
+    std::cout << "Test mesh\n" << test_mesh << std::endl;
     return 0;
 }

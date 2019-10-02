@@ -14,14 +14,13 @@
 using namespace std;
 using namespace Eigen;
 
-class tri_mesh
+struct tri_mesh
 {
     //basic triangular mesh
-    public:
-        //V is a float array (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
-        MatrixXf V;
-        //F is an integer array (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
-        MatrixXi F;
+    //V is a float array (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
+    MatrixXf V;
+    //F is an integer array (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
+    MatrixXi F;
 };
 
 void part1()
@@ -546,15 +545,67 @@ void task1_3(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
     write_matrix_to_png(R,G,B,A,filename);
 }
 
+vector<string> space_sep_string(string line)
+{
+    //std::cout << line << std::endl;
+    //separates string into a vector of substring as space dividers
+    //std::cout << "--" << std::endl;
+    
+    vector<int> split_index;
+    vector<string> substrings;
+    for (unsigned i=0;i<line.size();i++)
+    {
+        if(line[i]==' ')
+        {
+            split_index.push_back(i);
+        }
+    }
+
+    int split_start = 0;
+    int substr_len;
+    for (unsigned i=0;i<split_index.size()+1;i++)
+    {
+        
+        if(i<split_index.size())
+        {
+            substr_len= split_index[i] - split_start;
+            //std::cout << line.substr(split_start,split_index[i-1]) << std::endl;
+        }
+        else
+        {
+            //std::cout << line.substr(split_start,line.size()) << std::endl;
+            substr_len= line.size() - split_start;
+
+        }
+        substrings.push_back(line.substr(split_start,substr_len));
+        //std::cout << line.substr(split_start,substr_len) << std::endl;
+        if(i<split_index.size())
+        {
+            split_start = split_index[i]+1;
+        }
+        
+    }
+    //std::cout << "--" << std::endl;
+    return substrings;
+}
+
 void load_mesh(string off_filepath)
 {
-    //returns a triangule mesh object at the file path for the OFF file
+    // returns a triangule mesh object at the file path for the OFF file
     tri_mesh mesh_structure;
 
+    // mesh vertices
+    int num_vertices;
+    // mesh faces
+    int num_faces;
     ifstream in(off_filepath);
 
     char str[255];
     bool summary_line_read = false;
+    vector<string> substrings;
+
+    MatrixXf vertices;
+    MatrixXi faces;
     //read the first line
     in.getline(str,255);
 
@@ -570,34 +621,42 @@ void load_mesh(string off_filepath)
                 //then read the next line that doesn't start with '#'
                 // output the line
                 //std::cout << str << std::endl;
-                //store first number to num_vertices
-                int num_vertices;
-                //store second number to num_faces
-                int num_faces;
 
-                vector<int> split_index;
-                for (unsigned i=0;i<sizeof(str);i++)
-                {
-                    if(str[i]==' ')
-                    {
-                        split_index.push_back(i);
-                    }
-                }
-                num_vertices = stoi(string(str).substr(0,split_index[0]));
-                num_faces = stoi(string(str).substr(split_index[0]+1,split_index[1]));
+                substrings = space_sep_string(string(str));
+                num_vertices = stoi(substrings[0]);
+                num_faces = stoi(substrings[1]);
                 summary_line_read = true;
-                std::cout << num_vertices << ',' << num_faces << std::endl;
+                //std::cout << num_vertices << ',' << num_faces << std::endl;
             }
             //line_num++;
         }
-        // for (unsigned i=0;i<num_vertices;i++)
-        // {
-        //     //load matrix V with vertices
-        // }
-        // for (unsigned i=0;i<num_faces;i++)
-        // {
-        //     //load matrix V with vertices
-        // }
+
+        vertices.resize(num_vertices,3);
+        faces.resize(num_faces,3);
+
+        for (unsigned i=0;i<num_vertices;i++)
+        {
+            //load matrix V with vertices
+            in.getline(str,255);
+            //std::cout << str << std::endl;
+            substrings = space_sep_string(string(str));
+            //std::cout << substrings[0] << "," << substrings[1] << "," << substrings[2] << std::endl;
+            //std::cout << stof(substrings[0]) << "," << stof(substrings[1]) << "," << stof(substrings[2]) << std::endl;
+            vertices.row(i) << stof(substrings[0]),stof(substrings[1]),stof(substrings[2]);
+            //std::cout << vertices << std::endl;
+            //std::cout << "--" << std::endl;
+        }
+        //mesh_structure.V = vertices;
+        std::cout << "Vertex Matrix" << std::endl;
+        std::cout << vertices << std::endl;
+        for (unsigned i=0;i<num_faces;i++)
+        {
+            in.getline(str,255);
+            substrings = space_sep_string(string(str));
+            faces.row(i) << stoi(substrings[0]),stoi(substrings[1]),stoi(substrings[2]);
+        }
+        std::cout << "Face Matrix" << std::endl;
+        std::cout << faces << std::endl;
         //return mesh_structure;
     }
     else

@@ -653,7 +653,7 @@ void load_mesh(string off_filepath)
         {
             in.getline(str,255);
             substrings = space_sep_string(string(str));
-            faces.row(i) << stoi(substrings[0]),stoi(substrings[1]),stoi(substrings[2]);
+            faces.row(i) << stoi(substrings[2]),stoi(substrings[3]),stoi(substrings[4]);
         }
         std::cout << "Face Matrix" << std::endl;
         std::cout << faces << std::endl;

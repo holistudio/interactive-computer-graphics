@@ -547,10 +547,7 @@ void task1_3(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
 
 vector<string> space_sep_string(string line)
 {
-    //std::cout << line << std::endl;
     //separates string into a vector of substring as space dividers
-    //std::cout << "--" << std::endl;
-    
     vector<int> split_index;
     vector<string> substrings;
     for (unsigned i=0;i<line.size();i++)
@@ -565,27 +562,21 @@ vector<string> space_sep_string(string line)
     int substr_len;
     for (unsigned i=0;i<split_index.size()+1;i++)
     {
-        
         if(i<split_index.size())
         {
             substr_len= split_index[i] - split_start;
-            //std::cout << line.substr(split_start,split_index[i-1]) << std::endl;
         }
         else
         {
-            //std::cout << line.substr(split_start,line.size()) << std::endl;
             substr_len= line.size() - split_start;
-
         }
         substrings.push_back(line.substr(split_start,substr_len));
-        //std::cout << line.substr(split_start,substr_len) << std::endl;
         if(i<split_index.size())
         {
             split_start = split_index[i]+1;
         }
         
     }
-    //std::cout << "--" << std::endl;
     return substrings;
 }
 
@@ -613,22 +604,16 @@ void load_mesh(string off_filepath)
     if(string(str).compare("OFF")==0)
     {  
         std::cout << "Valid OFF File" << std::endl;
-        //int line_num = 1;
         while (summary_line_read == false && in.getline(str,255)) 
         {
             if(str[0]!='#')
             {
                 //then read the next line that doesn't start with '#'
-                // output the line
-                //std::cout << str << std::endl;
-
                 substrings = space_sep_string(string(str));
                 num_vertices = stoi(substrings[0]);
                 num_faces = stoi(substrings[1]);
                 summary_line_read = true;
-                //std::cout << num_vertices << ',' << num_faces << std::endl;
             }
-            //line_num++;
         }
 
         vertices.resize(num_vertices,3);
@@ -638,13 +623,8 @@ void load_mesh(string off_filepath)
         {
             //load matrix V with vertices
             in.getline(str,255);
-            //std::cout << str << std::endl;
             substrings = space_sep_string(string(str));
-            //std::cout << substrings[0] << "," << substrings[1] << "," << substrings[2] << std::endl;
-            //std::cout << stof(substrings[0]) << "," << stof(substrings[1]) << "," << stof(substrings[2]) << std::endl;
             vertices.row(i) << stof(substrings[0]),stof(substrings[1]),stof(substrings[2]);
-            //std::cout << vertices << std::endl;
-            //std::cout << "--" << std::endl;
         }
         //mesh_structure.V = vertices;
         std::cout << "Vertex Matrix" << std::endl;

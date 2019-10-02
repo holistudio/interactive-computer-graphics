@@ -27,6 +27,13 @@ std::ostream& operator<<(std::ostream &strm, const tri_mesh &a) {
   return strm << "Vertices\n" << a.V << "\nFaces\n" << a.F;
 }
 
+class ray
+{
+    public:
+        Vector3d e;
+        Vector3d d;
+};
+
 void part1()
 {
     std::cout << "Part 1: Writing a grid png image" << std::endl;
@@ -646,6 +653,42 @@ tri_mesh load_mesh(string off_filepath)
     }
 }
 
+float tri_intersection(ray r, Vector3d v1, Vector3d v2, Vector3d v3)
+{
+    //Cramer's rule
+    float a = v1[0] - v2[0];
+    float b = v1[1] - v2[1];
+    float c = v1[2] - v2[2];
+    float d = v1[0] - v3[0];
+    float e = v1[1] - v3[1];
+    float f = v1[2] - v3[2];
+    float g = r.d[0];
+    float h = r.d[1];
+    float i = r.d[2];
+    float j = v1[0]-r.e[0];
+    float k = v1[1]-r.e[1];
+    float l = v1[2]-r.e[2];
+
+    float ei_minus_hf = e*i - h*f;
+    float gf_minus_di = g*f - d*i;
+    float dh_minus_eg = d*h - e*g;
+
+    float M = a*(ei_minus_hf) + b*(gf_minus_di) + c*(dh_minus_eg);
+    float t = -(f*(a*k-j*b)+e*(j*c-a*l)+d*(b*l-k*c))/M;
+    if(t<0)
+    {
+        return -1;
+    }
+    float gamma = (i*(a*k-j*b)+h*(j*c-a*l)+g*(b*l-k*c))/M;
+    if(gamma < 0 || gamma >1){
+        return -1;
+    }
+    float beta = (j*ei_minus_hf+k*gf_minus_di+l*dh_minus_eg)/M;
+    if(beta < 0  || beta > 1-gamma){
+        return -1;
+    }
+    return t;
+}
 int main()
 {
     //part1();

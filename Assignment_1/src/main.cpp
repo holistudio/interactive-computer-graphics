@@ -1,5 +1,6 @@
 // C++ include
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <math.h>
@@ -15,6 +16,7 @@ using namespace Eigen;
 
 class tri_mesh
 {
+    //basic triangular mesh
     public:
         //V is a float array (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
         MatrixXf V;
@@ -544,28 +546,65 @@ void task1_3(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
     write_matrix_to_png(R,G,B,A,filename);
 }
 
-tri_mesh load_mesh(string off_filepath)
+void load_mesh(string off_filepath)
 {
     //returns a triangule mesh object at the file path for the OFF file
     tri_mesh mesh_structure;
-    
+
+    ifstream in(off_filepath);
+
+    char str[255];
+    bool summary_line_read = false;
     //read the first line
+    in.getline(str,255);
+
     //if the first line says 'OFF' continue
-        //then read the next line that doesn't start with '#'
-        //store first number to num_vertices
-        int num_vertices;
-        //store second number to num_faces
-        int num_faces;
-        for (unsigned i=0;i<num_vertices;i++)
+    if(string(str).compare("OFF")==0)
+    {  
+        std::cout << "Valid OFF File" << std::endl;
+        //int line_num = 1;
+        while (summary_line_read == false && in.getline(str,255)) 
         {
-            //load matrix V with vertices
+            if(str[0]!='#')
+            {
+                //then read the next line that doesn't start with '#'
+                // output the line
+                //std::cout << str << std::endl;
+                //store first number to num_vertices
+                int num_vertices;
+                //store second number to num_faces
+                int num_faces;
+
+                vector<int> split_index;
+                for (unsigned i=0;i<sizeof(str);i++)
+                {
+                    if(str[i]==' ')
+                    {
+                        split_index.push_back(i);
+                    }
+                }
+                num_vertices = stoi(string(str).substr(0,split_index[0]));
+                num_faces = stoi(string(str).substr(split_index[0]+1,split_index[1]));
+                summary_line_read = true;
+                std::cout << num_vertices << ',' << num_faces << std::endl;
+            }
+            //line_num++;
         }
-        for (unsigned i=0;i<num_faces;i++)
-        {
-            //load matrix V with vertices
-        }
-    //otherwise exit with output "Invalid file (not OFF file)"
-    return mesh_structure;
+        // for (unsigned i=0;i<num_vertices;i++)
+        // {
+        //     //load matrix V with vertices
+        // }
+        // for (unsigned i=0;i<num_faces;i++)
+        // {
+        //     //load matrix V with vertices
+        // }
+        //return mesh_structure;
+    }
+    else
+    {
+        //otherwise exit with output "Invalid file (not OFF file)"
+        std::cout << "Invalid file (not OFF file)" << std::endl;
+    }
 }
 
 int main()
@@ -590,6 +629,7 @@ int main()
     sphere_shading.push_back('s');
     sphere_shading.push_back('s');
     //task1_2(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
-    task1_3(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
+    //task1_3(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
+    load_mesh("../data/cube.off");
     return 0;
 }

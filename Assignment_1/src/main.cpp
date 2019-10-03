@@ -22,6 +22,7 @@ struct tri_mesh
     MatrixXd V;
     //F is an matrix (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
     MatrixXd F;
+    vector<int> color;
 };
 
 std::ostream& operator<<(std::ostream &strm, const tri_mesh &a) {
@@ -130,7 +131,7 @@ void task1_1(vector<float> sphere_radii, MatrixXd sphere_centers)
     Vector3d y_displacement;
 
     // Single light source
-    const Vector3d light_position(-0.8,1,1.2);
+    const Vector3d light_position(-2.0,  2.0,  2.0);
 
     // Ray intersection parameter
     double t1 = 0;
@@ -525,8 +526,9 @@ void task1_3(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
                 //for each light source
                 for(unsigned m=0;m<light_positions.rows();m++)
                 {
-                    // Simple diffuse model assuming light intensity I=1
                     Vector3d light_vector = (Vector3d(light_positions.row(m))-ray_intersection).normalized();
+                    
+                    // Simple diffuse model assuming light intensity I=1
                     color_intensity = light_vector.transpose() * ray_normal;
                     // Clamp to zero
                     color_intensity = max(color_intensity,0.);
@@ -619,7 +621,9 @@ tri_mesh load_mesh(string off_filepath)
             if(str[0]!='#')
             {
                 //then read the next line that doesn't start with '#'
+                
                 substrings = space_sep_string(string(str));
+                // std::cout << stoi(substrings[1]) << std::endl;
                 num_vertices = stoi(substrings[0]);
                 num_faces = stoi(substrings[1]);
                 summary_line_read = true;
@@ -635,14 +639,14 @@ tri_mesh load_mesh(string off_filepath)
             //load matrix V with vertices
             in.getline(str,255);
             substrings = space_sep_string(string(str));
-            mesh_structure.V.row(i) << stof(substrings[0]),stof(substrings[1]),stof(substrings[2]);
+            mesh_structure.V.row(i) << stof(substrings[0])*2,stof(substrings[1])*2,stof(substrings[2])*2;
         }
 
         for (unsigned i=0;i<num_faces;i++)
         {
             in.getline(str,255);
             substrings = space_sep_string(string(str));
-            mesh_structure.F.row(i) << stoi(substrings[2]),stoi(substrings[3]),stoi(substrings[4]);
+            mesh_structure.F.row(i) << stoi(substrings[1]),stoi(substrings[2]),stoi(substrings[3]);
         }
         return mesh_structure;
     }
@@ -691,9 +695,88 @@ double tri_intersection(ray r, Vector3d v1, Vector3d v2, Vector3d v3)
     return t;
 }
 
+class model
+{
+    public:
+        Vector3d position;
+        Vector3d color;
+        Vector3d getPosition(){
+            return position;
+        }
+};
+
+class sphere: public model
+{
+    public:
+        double radius;
+};
+
+class triangle: public model
+{
+    public:
+        Vector3d v1;
+        Vector3d v2;
+        Vector3d v3;
+};
+
+class hit_object
+{
+    public:
+        bool hit = false;
+        double t;
+        model hit_object;
+};
+
+// hit_object ray_hit(ray r, sphere m, string sphere_or_triangle)
+// {
+//     hit_object test;
+//     if(sphere_or_triangle.compare("sphere")==0)
+//     {
+//         const double sphere_radius = sphere(m).radius;
+//         Vector3d sphere_center = m.getPosition();
+
+//         //Calculate discriminant
+//         Vector3d e_c = r.e - sphere_center;
+//         //quadratic equation
+//         double a = ray_direction.dot(r.d);
+//         double b = ray_direction.dot(e_c);
+//         double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
+
+//         //discriminant
+//         double discriminant = b*b - a*c;
+
+//         if(discriminant>=0)
+//         {
+//             //if discriminant is greater than or equal to 0
+//             //Calculate sphere intersection parameter, t_new
+//             if(discriminant ==0)
+//             {
+//                 t_new = -b/a;
+//             }
+//             else
+//             {
+//                 t_new = (-b - sqrt(discriminant)) / a;
+//                 if(t_new < 0)
+//                 {
+//                     t_new = (-b + sqrt(discriminant)) / a;
+//                 }
+//                 else
+//                 {
+//                     double t2 = (-b + sqrt(discriminant)) / a;
+//                     if (t2>0 && t2<t_new)
+//                     {
+//                         t_new = t2;
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     return test;
+// }
+
 void task1_4(tri_mesh mesh_struct)
 {
-    //Duplicate of Task 1.2 but with perspective
+    //TODO: task1_4 needs to take an array of mesh structures
     std::cout << "Task 1.4: Triangle mesh" << std::endl;
     //camera coordinates
     double l = -1.0;
@@ -702,14 +785,14 @@ void task1_4(tri_mesh mesh_struct)
     double b = -1.0;
 
     const std::string filename("task1_4.png");
-    MatrixXd R = MatrixXd::Zero(800,800); // Store the red
-    MatrixXd G = MatrixXd::Zero(800,800); // green
-    MatrixXd B = MatrixXd::Zero(800,800); // blue
-    MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
+    MatrixXd R = MatrixXd::Zero(500,500); // Store the red
+    MatrixXd G = MatrixXd::Zero(500,500); // green
+    MatrixXd B = MatrixXd::Zero(500,500); // blue
+    MatrixXd A = MatrixXd::Zero(500,500); // Store the alpha mask
 
     // Perspective, pointing in the direction -z and covering the unit square (-1,1) in x and y
-    Vector3d cam_origin(0,0,2);
-    Vector3d cam_d = Vector3d(0,0,-1.5);
+    Vector3d cam_origin(0,0,0.4);
+    Vector3d cam_d = Vector3d(0,0,-0.35);
     Vector3d x_displacement;
     Vector3d y_displacement;
 
@@ -724,12 +807,12 @@ void task1_4(tri_mesh mesh_struct)
     bool hit = false;
 
     //hit triangle properties
+    int hit_mesh;
     int hit_face;
     Vector3d v1;
     Vector3d v2;
     Vector3d v3;
-    // Vector3d hit_sphere_color;
-    // char hit_sphere_shading;
+    vector<int> hit_color;
 
     // For each ray
     for (unsigned i=0;i<R.cols();i++)
@@ -737,6 +820,7 @@ void task1_4(tri_mesh mesh_struct)
         for (unsigned j=0;j<R.rows();j++)
         {
             // Prepare the ray, perspective camera
+            //std::cout << "Ray " << i << "," << j << std::endl;
             x_displacement = Vector3d(l+(r-l)*(i)/R.cols(),0,0);
             y_displacement = Vector3d(0,t-(t-b)*(j)/R.rows(),0);
             ray new_ray;
@@ -745,6 +829,7 @@ void task1_4(tri_mesh mesh_struct)
 
             hit = false;
 
+            // For each mesh
             // For each mesh triangle face
             for (unsigned k=0;k<mesh_struct.F.rows();k++)
             {
@@ -764,7 +849,9 @@ void task1_4(tri_mesh mesh_struct)
                     {
                         //this must be the first ray hit
                         t1 = t_new;
+                        //store hit_mesh
                         hit_face = k;
+                        //store color of hit_face to hit_color
                         hit = true;
                     }
                     else
@@ -774,7 +861,9 @@ void task1_4(tri_mesh mesh_struct)
                         if(t_new<t1)
                         {
                             t1 = t_new;
+                            //store hit_mesh
                             hit_face = k;
+                            //store color of hit_face to hit_color
                         }
                     }
                 }
@@ -821,34 +910,251 @@ void task1_4(tri_mesh mesh_struct)
     write_matrix_to_png(R,G,B,A,filename);
 }
 
+bool surface_light(ray r, vector<float> sphere_radii, MatrixXd sphere_centers)
+{
+    double t1 = 0;
+    double epsilon = 0.001;
+    for (unsigned k=0;k<sphere_radii.size();k++)
+    {
+        const double sphere_radius = sphere_radii[k];
+        Vector3d sphere_center(sphere_centers.coeffRef(k, 0),sphere_centers.coeffRef(k, 1),sphere_centers.coeffRef(k, 2));
+
+        //Calculate discriminant
+        Vector3d e_c = r.e - sphere_center;
+        //quadratic equation
+        double a = (r.d).dot(r.d);
+        double b = (r.d).dot(e_c);
+        double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
+
+        //discriminant
+        double discriminant = b*b - a*c;
+        
+        if(discriminant>=0)
+        {
+            if(discriminant ==0)
+            {
+                t1 = -b/a;
+            }
+            else
+            {
+                t1 = (-b - sqrt(discriminant)) / a;
+                if(t1 < 0)
+                {
+                    t1 = (-b + sqrt(discriminant)) / a;
+                }
+                else
+                {
+                    double t2 = (-b + sqrt(discriminant)) / a;
+                    if (t2>0 && t2<t1)
+                    {
+                        t1 = t2;
+                    }
+                }
+            }
+            if (t1 > epsilon){
+                return true;
+            }
+        }
+    }
+    //std::cout << "No hits to spheres" << std::endl;
+    return false;
+}
+
+void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd sphere_colors, vector<char> sphere_shading)
+{
+    std::cout << "Task 1.5: Shadows" << std::endl;
+    //camera coordinates
+    double l = -1.0;
+    double r = 1.0;
+    double t = 1.0;
+    double b = -1.0;
+
+    const std::string filename("task1_5.png");
+    MatrixXd R = MatrixXd::Zero(800,800); // Store the red
+    MatrixXd G = MatrixXd::Zero(800,800); // green
+    MatrixXd B = MatrixXd::Zero(800,800); // blue
+    MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
+
+    // Perspective, pointing in the direction -z and covering the unit square (-1,1) in x and y
+    Vector3d cam_origin(0,0,2);
+    Vector3d cam_d = Vector3d(0,0,-1.5);
+    Vector3d x_displacement;
+    Vector3d y_displacement;
+
+    // Multiple Light Sources
+    MatrixXd light_positions(2,3);
+    light_positions <<  -2.0,  2.0,  2.0,
+                         1.0, -1.0, -1.0;
+
+    // Ray intersection parameter
+    double t1 = 0;
+    double t_new = 0;
+    bool hit = false;
+
+    //hit sphere properties
+    double hit_sphere_radius;
+    Vector3d hit_sphere_center;
+    Vector3d hit_sphere_color;
+    char hit_sphere_shading;
+
+    // For each ray with direction -w
+    for (unsigned i=0;i<R.cols();i++)
+    {
+        for (unsigned j=0;j<R.rows();j++)
+        {
+            // Prepare the ray, perspective camera
+            x_displacement = Vector3d(l+(r-l)*(i)/R.cols(),0,0);
+            y_displacement = Vector3d(0,t-(t-b)*(j)/R.rows(),0);
+            Vector3d ray_origin = cam_origin;
+            Vector3d ray_direction = cam_d+x_displacement+y_displacement;
+            hit = false;
+
+            // For each sphere
+            for (unsigned k=0;k<sphere_radii.size();k++)
+            {
+                const double sphere_radius = sphere_radii[k];
+                Vector3d sphere_center(sphere_centers.coeffRef(k, 0),sphere_centers.coeffRef(k, 1),sphere_centers.coeffRef(k, 2));
+
+                //Calculate discriminant
+                Vector3d e_c = ray_origin - sphere_center;
+                //quadratic equation
+                double a = ray_direction.dot(ray_direction);
+                double b = ray_direction.dot(e_c);
+                double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
+
+                //discriminant
+                double discriminant = b*b - a*c;
+
+                if(discriminant>=0)
+                {
+                    //if discriminant is greater than or equal to 0
+                    //Calculate sphere intersection parameter, t_new
+                    if(discriminant ==0)
+                    {
+                        t_new = -b/a;
+                    }
+                    else
+                    {
+                        t_new = (-b - sqrt(discriminant)) / a;
+                        if(t_new < 0)
+                        {
+                            t_new = (-b + sqrt(discriminant)) / a;
+                        }
+                        else
+                        {
+                            double t2 = (-b + sqrt(discriminant)) / a;
+                            if (t2>0 && t2<t_new)
+                            {
+                                t_new = t2;
+                            }
+                        }
+                    }
+                    if(hit == false)
+                    {
+                        //this must be the first ray hit
+                        t1 = t_new;
+                        hit_sphere_center = sphere_center;
+                        hit_sphere_radius = sphere_radius;
+                        hit_sphere_color = Vector3d(sphere_colors.row(k));
+                        hit_sphere_shading = sphere_shading[k];
+                        hit = true;
+                    }
+                    else
+                    {
+                        //this means there's already a hit from another sphere
+                        //If that t is less than stored t, then replace stored t with the new t
+                        if(t_new<t1)
+                        {
+                            t1 = t_new;
+                            hit_sphere_center = sphere_center;
+                            hit_sphere_radius = sphere_radius;
+                            hit_sphere_color = Vector3d(sphere_colors.row(k));
+                            hit_sphere_shading = sphere_shading[k];
+                        }
+                    }
+                }
+
+            }
+
+            //if hit is true, then do lighting calculations
+            if (hit == true)
+            {
+                Vector3d ray_intersection = ray_origin + t1 * ray_direction;
+                Vector3d ray_normal = (ray_intersection-hit_sphere_center)/hit_sphere_radius;
+
+                double color_intensity=0.0;
+
+                //for each light source
+                for(unsigned m=0;m<light_positions.rows();m++)
+                {
+                    Vector3d light_vector = (Vector3d(light_positions.row(m))-ray_intersection);
+                    ray shadow_ray;
+                    shadow_ray.e = ray_intersection;
+                    shadow_ray.d = light_vector;
+
+                    if(surface_light(shadow_ray,sphere_radii,sphere_centers)==false)
+                    {
+                        light_vector = light_vector.normalized();
+                        // Simple diffuse model assuming light intensity I=1
+                        color_intensity = light_vector.transpose() * ray_normal;
+                        // Clamp to zero
+                        color_intensity = max(color_intensity,0.);
+
+                        //Specular shading, assuming Phong exponent p=100
+                        if(hit_sphere_shading=='s')
+                        {
+                            Vector3d half_vector=(-ray_direction+light_vector).normalized();
+                            color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
+                        }
+                        R(i,j) = R(i,j)+color_intensity;
+                        G(i,j) = G(i,j)+color_intensity;
+                        B(i,j) = B(i,j)+color_intensity;
+                    }
+                }
+
+                //adjust RGB based on the hit sphere's color
+                //assume kd and ks are same, based on RGB values provided in arguments
+                R(i,j)=R(i,j)*hit_sphere_color.coeff(0)/255;
+                G(i,j)=G(i,j)*hit_sphere_color.coeff(1)/255;
+                B(i,j)=B(i,j)*hit_sphere_color.coeff(2)/255;
+
+                // Disable the alpha mask for this pixel
+                A(i,j) = 1;
+            }
+
+        }
+    }
+    write_matrix_to_png(R,G,B,A,filename);
+}
+
 int main()
 {
     //part1();
     //part2();
     vector<float> spheresRadii;
-    MatrixXd spheresCenters(3,3);
-    spheresRadii.push_back(0.9);
-    spheresRadii.push_back(0.3);
-    spheresRadii.push_back(0.4);
+    MatrixXd spheresCenters(2,3);
+    spheresRadii.push_back(0.5);
+    spheresRadii.push_back(0.1);
     spheresCenters << 0, 0, 0,
-                      0.2, -0.2, 1.0,
-                      0.5,0.5,0.5;
-    //task1_1(spheresRadii,spheresCenters);
-    MatrixXd spheres_colors(3,3); //in RGB
+                      -0.6, 0.6, 0.6;
+    task1_1(spheresRadii,spheresCenters);
+    MatrixXd spheres_colors(2,3); //in RGB
     spheres_colors << 66, 135, 245,
-                     0, 255, 166,
-                     237, 0, 206;
+                     0, 255, 166;
     vector<char> sphere_shading;
     sphere_shading.push_back('d');
     sphere_shading.push_back('s');
-    sphere_shading.push_back('s');
     //task1_2(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
     //task1_3(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
-    tri_mesh test_mesh = load_mesh("../data/cube.off");
-    //std::cout << "Test mesh\n" << test_mesh << std::endl;
-    // Vector3d test_vector1(test_mesh.V.row(0).coeff(0),test_mesh.V.row(0).coeff(1),test_mesh.V.row(0).coeff(2));
-    // Vector3d test_vector2(test_mesh.V.row(1).coeff(0),test_mesh.V.row(1).coeff(1),test_mesh.V.row(1).coeff(2));
-    // std::cout << (test_vector1-test_vector2).cross(test_vector1-test_vector2) << std::endl;
-    task1_4(test_mesh);
+
+    tri_mesh ground_plane;
+    //TODO: create a simple ground plane...in a separate OFF file.
+
+    //tri_mesh test_mesh = load_mesh("../data/bunny.off");
+
+    //add mesh to mesh array
+
+    // task1_4(test_mesh);
+    task1_5(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
     return 0;
 }

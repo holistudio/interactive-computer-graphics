@@ -831,10 +831,10 @@ void task1_4(tri_mesh mesh_struct)
     //TODO: task1_4 needs to take an array of mesh structures
     std::cout << "Task 1.4: Triangle mesh" << std::endl;
     //camera coordinates
-    double l = -1.0;
-    double r = 1.0;
-    double t = 1.0;
-    double b = -1.0;
+    double l = -6.0;
+    double r = 6.0;
+    double t = 6.0;
+    double b = -6.0;
 
     const std::string filename("task1_4.png");
     MatrixXd R = MatrixXd::Zero(500,500); // Store the red
@@ -1285,11 +1285,11 @@ int main()
 
     //add mesh to mesh array
 
-    //task1_4(test_mesh);
+    task1_4(test_mesh);
     
     vector<tri_mesh> tri_meshes;
     tri_meshes.push_back(ground_plane);
-    task1_5(spheres, tri_meshes);
+    //task1_5(spheres, tri_meshes);
     
     return 0;
 }

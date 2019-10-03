@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <math.h>
+#include<Eigen/Geometry>
 
 // Image writing library
 #define STB_IMAGE_WRITE_IMPLEMENTATION // Do not include this line twice in your project!
@@ -17,10 +18,10 @@ using namespace Eigen;
 struct tri_mesh
 {
     //basic triangular mesh
-    //V is a float array (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
-    MatrixXf V;
-    //F is an integer array (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
-    MatrixXi F;
+    //V is a matrix (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
+    MatrixXd V;
+    //F is an matrix (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
+    MatrixXd F;
 };
 
 std::ostream& operator<<(std::ostream &strm, const tri_mesh &a) {
@@ -653,42 +654,173 @@ tri_mesh load_mesh(string off_filepath)
     }
 }
 
-float tri_intersection(ray r, Vector3d v1, Vector3d v2, Vector3d v3)
+double tri_intersection(ray r, Vector3d v1, Vector3d v2, Vector3d v3)
 {
     //Cramer's rule
-    float a = v1[0] - v2[0];
-    float b = v1[1] - v2[1];
-    float c = v1[2] - v2[2];
-    float d = v1[0] - v3[0];
-    float e = v1[1] - v3[1];
-    float f = v1[2] - v3[2];
-    float g = r.d[0];
-    float h = r.d[1];
-    float i = r.d[2];
-    float j = v1[0]-r.e[0];
-    float k = v1[1]-r.e[1];
-    float l = v1[2]-r.e[2];
+    double a = v1[0] - v2[0];
+    double b = v1[1] - v2[1];
+    double c = v1[2] - v2[2];
+    double d = v1[0] - v3[0];
+    double e = v1[1] - v3[1];
+    double f = v1[2] - v3[2];
+    double g = r.d[0];
+    double h = r.d[1];
+    double i = r.d[2];
+    double j = v1[0]-r.e[0];
+    double k = v1[1]-r.e[1];
+    double l = v1[2]-r.e[2];
 
-    float ei_minus_hf = e*i - h*f;
-    float gf_minus_di = g*f - d*i;
-    float dh_minus_eg = d*h - e*g;
+    double ei_minus_hf = e*i - h*f;
+    double gf_minus_di = g*f - d*i;
+    double dh_minus_eg = d*h - e*g;
 
-    float M = a*(ei_minus_hf) + b*(gf_minus_di) + c*(dh_minus_eg);
-    float t = -(f*(a*k-j*b)+e*(j*c-a*l)+d*(b*l-k*c))/M;
+    double M = a*(ei_minus_hf) + b*(gf_minus_di) + c*(dh_minus_eg);
+    double t = -(f*(a*k-j*b)+e*(j*c-a*l)+d*(b*l-k*c))/M;
     if(t<0)
     {
         return -1;
     }
-    float gamma = (i*(a*k-j*b)+h*(j*c-a*l)+g*(b*l-k*c))/M;
+    double gamma = (i*(a*k-j*b)+h*(j*c-a*l)+g*(b*l-k*c))/M;
     if(gamma < 0 || gamma >1){
         return -1;
     }
-    float beta = (j*ei_minus_hf+k*gf_minus_di+l*dh_minus_eg)/M;
+    double beta = (j*ei_minus_hf+k*gf_minus_di+l*dh_minus_eg)/M;
     if(beta < 0  || beta > 1-gamma){
         return -1;
     }
     return t;
 }
+
+void task1_4(tri_mesh mesh_struct)
+{
+    //Duplicate of Task 1.2 but with perspective
+    std::cout << "Task 1.4: Triangle mesh" << std::endl;
+    //camera coordinates
+    double l = -1.0;
+    double r = 1.0;
+    double t = 1.0;
+    double b = -1.0;
+
+    const std::string filename("task1_4.png");
+    MatrixXd R = MatrixXd::Zero(800,800); // Store the red
+    MatrixXd G = MatrixXd::Zero(800,800); // green
+    MatrixXd B = MatrixXd::Zero(800,800); // blue
+    MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
+
+    // Perspective, pointing in the direction -z and covering the unit square (-1,1) in x and y
+    Vector3d cam_origin(0,0,2);
+    Vector3d cam_d = Vector3d(0,0,-1.5);
+    Vector3d x_displacement;
+    Vector3d y_displacement;
+
+    // Multiple Light Sources
+    MatrixXd light_positions(2,3);
+    light_positions <<  -0.8,  1.0,  1.2,
+                         1.0, -1.0, -1.0;
+
+    // Ray intersection parameter
+    double t1 = 0;
+    double t_new = 0;
+    bool hit = false;
+
+    //hit triangle properties
+    int hit_face;
+    Vector3d v1;
+    Vector3d v2;
+    Vector3d v3;
+    // Vector3d hit_sphere_color;
+    // char hit_sphere_shading;
+
+    // For each ray
+    for (unsigned i=0;i<R.cols();i++)
+    {
+        for (unsigned j=0;j<R.rows();j++)
+        {
+            // Prepare the ray, perspective camera
+            x_displacement = Vector3d(l+(r-l)*(i)/R.cols(),0,0);
+            y_displacement = Vector3d(0,t-(t-b)*(j)/R.rows(),0);
+            ray new_ray;
+            new_ray.e = cam_origin;
+            new_ray.d = cam_d+x_displacement+y_displacement;
+
+            hit = false;
+
+            // For each mesh triangle face
+            for (unsigned k=0;k<mesh_struct.F.rows();k++)
+            {
+                v1 = Vector3d(mesh_struct.V.row(mesh_struct.F.coeffRef(k,0)).coeff(0),
+                        mesh_struct.V.row(mesh_struct.F.coeffRef(k,0)).coeff(1),
+                        mesh_struct.V.row(mesh_struct.F.coeffRef(k,0)).coeff(2));
+                v2 = Vector3d(mesh_struct.V.row(mesh_struct.F.coeffRef(k,1)).coeff(0),
+                        mesh_struct.V.row(mesh_struct.F.coeffRef(k,1)).coeff(1),
+                        mesh_struct.V.row(mesh_struct.F.coeffRef(k,1)).coeff(2));
+                v3 = Vector3d(mesh_struct.V.row(mesh_struct.F.coeffRef(k,2)).coeff(0),
+                        mesh_struct.V.row(mesh_struct.F.coeffRef(k,2)).coeff(1),
+                        mesh_struct.V.row(mesh_struct.F.coeffRef(k,2)).coeff(2));
+                t_new = tri_intersection(new_ray,v1,v2,v3);
+                if (t_new>=0)
+                {
+                    if(hit == false)
+                    {
+                        //this must be the first ray hit
+                        t1 = t_new;
+                        hit_face = k;
+                        hit = true;
+                    }
+                    else
+                    {
+                        //this means there's already a hit on another triangle face
+                        //If that t is less than stored t, then replace stored t with the new t
+                        if(t_new<t1)
+                        {
+                            t1 = t_new;
+                            hit_face = k;
+                        }
+                    }
+                }
+
+            }
+
+            //if hit is true, then do lighting calculations
+            if (hit)
+            {
+                Vector3d ray_intersection = new_ray.e + t1 * new_ray.d;
+
+                Vector3d h1 = Vector3d(mesh_struct.V.row(mesh_struct.F.coeffRef(hit_face,0)).coeff(0),
+                mesh_struct.V.row(mesh_struct.F.coeffRef(hit_face,0)).coeff(1),
+                mesh_struct.V.row(mesh_struct.F.coeffRef(hit_face,0)).coeff(2));
+                Vector3d h2 = Vector3d(mesh_struct.V.row(mesh_struct.F.coeffRef(hit_face,1)).coeff(0),
+                mesh_struct.V.row(mesh_struct.F.coeffRef(hit_face,1)).coeff(1),
+                mesh_struct.V.row(mesh_struct.F.coeffRef(hit_face,1)).coeff(2));
+                Vector3d h3 = Vector3d(mesh_struct.V.row(mesh_struct.F.coeffRef(hit_face,2)).coeff(0),
+                mesh_struct.V.row(mesh_struct.F.coeffRef(hit_face,2)).coeff(1),
+                mesh_struct.V.row(mesh_struct.F.coeffRef(hit_face,2)).coeff(2));
+                Vector3d ray_normal = ((h2-h1).cross(h3-h1)).normalized();
+                double color_intensity=0.0;
+
+                //for each light source
+                for(unsigned m=0;m<light_positions.rows();m++)
+                {
+                    // Simple diffuse model assuming light intensity I=1
+                    Vector3d light_vector = (Vector3d(light_positions.row(m))-ray_intersection).normalized();
+                    color_intensity = light_vector.transpose() * ray_normal;
+                    // Clamp to zero
+                    color_intensity = max(color_intensity,0.);
+
+                    R(i,j) = R(i,j)+color_intensity;
+                    G(i,j) = G(i,j)+color_intensity;
+                    B(i,j) = B(i,j)+color_intensity;
+                }
+
+                // Disable the alpha mask for this pixel
+                A(i,j) = 1;
+            }
+
+        }
+    }
+    write_matrix_to_png(R,G,B,A,filename);
+}
+
 int main()
 {
     //part1();
@@ -713,6 +845,10 @@ int main()
     //task1_2(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
     //task1_3(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
     tri_mesh test_mesh = load_mesh("../data/cube.off");
-    std::cout << "Test mesh\n" << test_mesh << std::endl;
+    //std::cout << "Test mesh\n" << test_mesh << std::endl;
+    // Vector3d test_vector1(test_mesh.V.row(0).coeff(0),test_mesh.V.row(0).coeff(1),test_mesh.V.row(0).coeff(2));
+    // Vector3d test_vector2(test_mesh.V.row(1).coeff(0),test_mesh.V.row(1).coeff(1),test_mesh.V.row(1).coeff(2));
+    // std::cout << (test_vector1-test_vector2).cross(test_vector1-test_vector2) << std::endl;
+    task1_4(test_mesh);
     return 0;
 }

@@ -842,15 +842,14 @@ void task1_4(tri_mesh mesh_struct)
     MatrixXd A = MatrixXd::Zero(500,500); // Store the alpha mask
 
     // Perspective, pointing in the direction -z and covering the unit square (-1,1) in x and y
-    Vector3d cam_origin(0,0,0.4);
-    Vector3d cam_d = Vector3d(0,0,-0.35);
+    Vector3d cam_origin(0,0,6);
+    Vector3d cam_d = Vector3d(0,0,-5.5);
     Vector3d x_displacement;
     Vector3d y_displacement;
 
     // Multiple Light Sources
     MatrixXd light_positions(2,3);
-    light_positions <<  -0.8,  1.0,  1.2,
-                         1.0, -1.0, -1.0;
+    light_positions <<  5.0,  5.0,  5.0;
 
     // Ray intersection parameter
     double t1 = 0;
@@ -1259,16 +1258,19 @@ int main()
     //task1_2(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
     //task1_3(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
 
-    tri_mesh ground_plane;
+    tri_mesh ground_plane = load_mesh("../data/ground_plane.off");;
     //TODO: create a simple ground plane...in a separate OFF file.
 
-    tri_mesh test_mesh = load_mesh("../data/ground_plane.off");
+    tri_mesh test_mesh = load_mesh("../data/bumpy_cube.off");
+
 
     //add mesh to mesh array
 
-    // task1_4(test_mesh);
+    task1_4(test_mesh);
+    
     vector<tri_mesh> tri_meshes;
-    tri_meshes.push_back(test_mesh);
-    task1_5(spheresRadii,spheresCenters,spheres_colors,sphere_shading, tri_meshes);
+    tri_meshes.push_back(ground_plane);
+    //task1_5(spheresRadii,spheresCenters,spheres_colors,sphere_shading, tri_meshes);
+    
     return 0;
 }

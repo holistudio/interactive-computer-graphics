@@ -22,7 +22,8 @@ struct tri_mesh
     MatrixXd V;
     //F is an matrix (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
     MatrixXd F;
-    vector<int> color;
+    Vector3d color;
+    char shader_type;
 };
 
 std::ostream& operator<<(std::ostream &strm, const tri_mesh &a) {
@@ -598,6 +599,8 @@ tri_mesh load_mesh(string off_filepath)
 {
     // returns a triangule mesh object at the file path for the OFF file
     tri_mesh mesh_structure;
+    mesh_structure.color = Vector3d(255,255,255);
+    mesh_structure.shader_type = 'd';
 
     // mesh vertices
     int num_vertices;
@@ -639,7 +642,7 @@ tri_mesh load_mesh(string off_filepath)
             //load matrix V with vertices
             in.getline(str,255);
             substrings = space_sep_string(string(str));
-            mesh_structure.V.row(i) << stof(substrings[0])*2,stof(substrings[1])*2,stof(substrings[2])*2;
+            mesh_structure.V.row(i) << stof(substrings[0]),stof(substrings[1]),stof(substrings[2]);
         }
 
         for (unsigned i=0;i<num_faces;i++)
@@ -817,6 +820,9 @@ hit_triangle ray_hit_triangle(ray r, triangle test_triangle)
     if(beta < 0  || beta > 1-gamma){
         return test;
     }
+    test.hit = true;
+    test.hit_obj = test_triangle;
+    test.t = t;
     return test;
 }
 void task1_4(tri_mesh mesh_struct)
@@ -955,7 +961,7 @@ void task1_4(tri_mesh mesh_struct)
     write_matrix_to_png(R,G,B,A,filename);
 }
 
-bool surface_light(ray r, vector<float> sphere_radii, MatrixXd sphere_centers)
+bool surface_light(ray r, vector<float> sphere_radii, MatrixXd sphere_centers, vector<tri_mesh> tri_meshes)
 {
     double t1 = 0;
     double epsilon = 0.001;
@@ -1001,11 +1007,26 @@ bool surface_light(ray r, vector<float> sphere_radii, MatrixXd sphere_centers)
             }
         }
     }
-    //std::cout << "No hits to spheres" << std::endl;
+
+    for (unsigned k=0;k<tri_meshes.size();k++)
+    {
+        for (unsigned a=0;a<tri_meshes[k].F.rows();a++) 
+        {
+            triangle test_tri;
+            test_tri.v1 = Vector3d(tri_meshes[k].V.row(tri_meshes[k].F.coeff(a,0)));
+            test_tri.v2 = Vector3d(tri_meshes[k].V.row(tri_meshes[k].F.coeff(a,1)));
+            test_tri.v3 = Vector3d(tri_meshes[k].V.row(tri_meshes[k].F.coeff(a,2)));
+            hit_triangle hit_test2 = ray_hit_triangle(r,test_tri);
+            if(hit_test2.hit)
+            {
+                return true;
+            }
+        }
+    }
     return false;
 }
 
-void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd sphere_colors, vector<char> sphere_shading)
+void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd sphere_colors, vector<char> sphere_shading, vector<tri_mesh> tri_meshes)
 {
     std::cout << "Task 1.5: Shadows" << std::endl;
     //camera coordinates
@@ -1044,6 +1065,8 @@ void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
             camera_ray.d = cam_d+x_displacement+y_displacement;
 
             hit_sphere hit_record;
+            hit_triangle hit_record2;
+
             // For each sphere
             for (unsigned k=0;k<sphere_radii.size();k++)
             {
@@ -1069,15 +1092,84 @@ void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
 
                 }
             }
-            //std::cout << hit_record.hit << std::endl;
+
+            //For each mesh
+            for (unsigned k=0;k<tri_meshes.size();k++)
+            {
+                for (unsigned a=0;a<tri_meshes[k].F.rows();a++) 
+                {
+                    
+                    triangle test_tri;
+                    test_tri.v1 = Vector3d(tri_meshes[k].V.row(tri_meshes[k].F.coeff(a,0)));
+                    test_tri.v2 = Vector3d(tri_meshes[k].V.row(tri_meshes[k].F.coeff(a,1)));
+                    test_tri.v3 = Vector3d(tri_meshes[k].V.row(tri_meshes[k].F.coeff(a,2)));
+                    test_tri.color = tri_meshes[k].color;
+                    test_tri.shader_type = tri_meshes[k].shader_type;
+                    hit_triangle hit_test2 = ray_hit_triangle(camera_ray,test_tri);
+                    if(hit_test2.hit)
+                    {
+                        if(hit_record2.hit == false)
+                        {
+                            hit_record2 = hit_test2;
+                        }
+                        else
+                        {
+                            if(hit_test2.t<hit_record2.t)
+                            {
+                                hit_record2 = hit_test2;
+                            }
+                        }
+                    }
+                }
+            }
 
             //if hit is true, then do lighting calculations
-            if (hit_record.hit)
+            if (hit_record.hit || hit_record2.hit)
             {
-                //std::cout << hit_record.hit_obj.position << std::endl;
-
-                Vector3d ray_intersection = camera_ray.e + hit_record.t * camera_ray.d;
-                Vector3d ray_normal = (ray_intersection-hit_record.hit_obj.position)/hit_record.hit_obj.radius;
+                string hit_type;
+                double t_int;
+                if(hit_record.hit && hit_record2.hit)
+                {
+                    if(hit_record.t<=hit_record2.t)
+                    {
+                        hit_type = "sphere";
+                        t_int = hit_record.t;
+                    }
+                    else
+                    {
+                        hit_type = "triangle";
+                        t_int = hit_record2.t;
+                    }
+                }
+                else
+                {
+                    if(hit_record.hit)
+                    {
+                        hit_type = "sphere";
+                        t_int = hit_record.t;
+                    }
+                    if(hit_record2.hit)
+                    {
+                        hit_type = "triangle";
+                        t_int = hit_record2.t;
+                    }
+                }
+                
+                
+                Vector3d ray_intersection = camera_ray.e + t_int * camera_ray.d;
+                
+                Vector3d ray_normal;
+                if(hit_type.compare("sphere")==0)
+                {
+                    ray_normal = (ray_intersection-hit_record.hit_obj.position)/hit_record.hit_obj.radius;
+                }
+                if(hit_type.compare("triangle")==0)
+                {
+                    Vector3d h1 = hit_record2.hit_obj.v1;
+                    Vector3d h2 = hit_record2.hit_obj.v2;
+                    Vector3d h3 = hit_record2.hit_obj.v3;
+                    ray_normal = ((h2-h1).cross(h3-h1)).normalized();
+                }
 
                 double color_intensity=0.0;
 
@@ -1089,19 +1181,30 @@ void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
                     shadow_ray.e = ray_intersection;
                     shadow_ray.d = light_vector;
 
-                    if(surface_light(shadow_ray,sphere_radii,sphere_centers)==false)
+                    if(surface_light(shadow_ray,sphere_radii,sphere_centers, tri_meshes)==false)
                     {
                         light_vector = light_vector.normalized();
                         // Simple diffuse model assuming light intensity I=1
                         // Clamp to zero
                         color_intensity = light_vector.transpose() * ray_normal;
                         color_intensity = max(color_intensity,0.);
-
-                        //Specular shading, assuming Phong exponent p=100
-                        if(hit_record.hit_obj.shader_type=='s')
+                        if(hit_type.compare("sphere")==0)
                         {
-                            Vector3d half_vector=(-camera_ray.d+light_vector).normalized();
-                            color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
+                            //Specular shading, assuming Phong exponent p=100
+                            if(hit_record.hit_obj.shader_type=='s')
+                            {
+                                Vector3d half_vector=(-camera_ray.d+light_vector).normalized();
+                                color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
+                            }
+                        }
+                        if(hit_type.compare("triange")==0)
+                        {
+                            //Specular shading, assuming Phong exponent p=100
+                            if(hit_record2.hit_obj.shader_type=='s')
+                            {
+                                Vector3d half_vector=(-camera_ray.d+light_vector).normalized();
+                                color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
+                            }
                         }
                         R(i,j) = R(i,j)+color_intensity;
                         G(i,j) = G(i,j)+color_intensity;
@@ -1111,9 +1214,18 @@ void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
 
                 //adjust RGB based on the hit sphere's color
                 //assume kd and ks are same, based on RGB values provided in arguments
-                R(i,j)=R(i,j)*hit_record.hit_obj.color.coeff(0)/255;
-                G(i,j)=G(i,j)*hit_record.hit_obj.color.coeff(1)/255;
-                B(i,j)=B(i,j)*hit_record.hit_obj.color.coeff(2)/255;
+                if(hit_type.compare("sphere")==0)
+                {
+                    R(i,j)=R(i,j)*hit_record.hit_obj.color.coeff(0)/255;
+                    G(i,j)=G(i,j)*hit_record.hit_obj.color.coeff(1)/255;
+                    B(i,j)=B(i,j)*hit_record.hit_obj.color.coeff(2)/255;
+                }
+                if(hit_type.compare("triangle")==0)
+                {
+                    R(i,j)=R(i,j)*hit_record2.hit_obj.color.coeff(0)/255;
+                    G(i,j)=G(i,j)*hit_record2.hit_obj.color.coeff(1)/255;
+                    B(i,j)=B(i,j)*hit_record2.hit_obj.color.coeff(2)/255;
+                }
 
                 // Disable the alpha mask for this pixel
                 A(i,j) = 1;
@@ -1147,11 +1259,13 @@ int main()
     tri_mesh ground_plane;
     //TODO: create a simple ground plane...in a separate OFF file.
 
-    //tri_mesh test_mesh = load_mesh("../data/bunny.off");
+    tri_mesh test_mesh = load_mesh("../data/ground_plane.off");
 
     //add mesh to mesh array
 
     // task1_4(test_mesh);
-    task1_5(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
+    vector<tri_mesh> tri_meshes;
+    tri_meshes.push_back(test_mesh);
+    task1_5(spheresRadii,spheresCenters,spheres_colors,sphere_shading, tri_meshes);
     return 0;
 }

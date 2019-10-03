@@ -719,6 +719,7 @@ class triangle: public model
         Vector3d v1;
         Vector3d v2;
         Vector3d v3;
+        bool mirror = false;
 };
 
 class hit_sphere
@@ -1201,6 +1202,217 @@ void task1_5(vector<sphere> spheres, vector<tri_mesh> tri_meshes)
                             }
                         }
                         if(hit_type.compare("triange")==0)
+                        {
+                            //Specular shading, assuming Phong exponent p=100
+                            if(hit_record2.hit_obj.shader_type=='s')
+                            {
+                                Vector3d half_vector=(-camera_ray.d+light_vector).normalized();
+                                color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
+                            }
+                        }
+                        R(i,j) = R(i,j)+color_intensity;
+                        G(i,j) = G(i,j)+color_intensity;
+                        B(i,j) = B(i,j)+color_intensity;
+                    }
+                }
+
+                //adjust RGB based on the hit sphere's color
+                //assume kd and ks are same, based on RGB values provided in arguments
+                if(hit_type.compare("sphere")==0)
+                {
+                    R(i,j)=R(i,j)*hit_record.hit_obj.color.coeff(0)/255;
+                    G(i,j)=G(i,j)*hit_record.hit_obj.color.coeff(1)/255;
+                    B(i,j)=B(i,j)*hit_record.hit_obj.color.coeff(2)/255;
+                }
+                if(hit_type.compare("triangle")==0)
+                {
+                    R(i,j)=R(i,j)*hit_record2.hit_obj.color.coeff(0)/255;
+                    G(i,j)=G(i,j)*hit_record2.hit_obj.color.coeff(1)/255;
+                    B(i,j)=B(i,j)*hit_record2.hit_obj.color.coeff(2)/255;
+                }
+
+                // Disable the alpha mask for this pixel
+                A(i,j) = 1;
+            }
+
+        }
+    }
+    write_matrix_to_png(R,G,B,A,filename);
+}
+
+
+void task1_6(vector<sphere> spheres, vector<tri_mesh> tri_meshes, int recur_count)
+{
+    std::cout << "Task 1.6: Reflection" << std::endl;
+    //camera coordinates
+    double l = -1.0;
+    double r = 1.0;
+    double t = 1.0;
+    double b = -1.0;
+
+    const std::string filename("task1_6.png");
+    MatrixXd R = MatrixXd::Zero(800,800); // Store the red
+    MatrixXd G = MatrixXd::Zero(800,800); // green
+    MatrixXd B = MatrixXd::Zero(800,800); // blue
+    MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
+
+    // Perspective, pointing in the direction -z and covering the unit square (-1,1) in x and y
+    Vector3d cam_origin(0,0,2);
+    Vector3d cam_d = Vector3d(0,0,-1.5);
+    Vector3d x_displacement;
+    Vector3d y_displacement;
+
+    // Multiple Light Sources
+    MatrixXd light_positions(2,3);
+    light_positions <<  -2.0,  2.0,  2.0,
+                         1.0, -1.0, -1.0;
+
+    // For each ray with direction -w
+    for (unsigned i=0;i<R.cols();i++)
+    {
+        for (unsigned j=0;j<R.rows();j++)
+        {
+            // Prepare the ray, perspective camera
+            x_displacement = Vector3d(l+(r-l)*(i)/R.cols(),0,0);
+            y_displacement = Vector3d(0,t-(t-b)*(j)/R.rows(),0);
+            ray camera_ray;
+            camera_ray.e = cam_origin;
+            camera_ray.d = cam_d+x_displacement+y_displacement;
+
+            hit_sphere hit_record;
+            hit_triangle hit_record2;
+
+            // For each sphere
+            for (unsigned k=0;k<spheres.size();k++)
+            {
+                sphere test_sphere;
+                test_sphere.radius = spheres[k].radius;
+                test_sphere.position = spheres[k].position;
+                test_sphere.color = spheres[k].color;
+                test_sphere.shader_type = spheres[k].shader_type;
+                hit_sphere hit_test = ray_hit_sphere(camera_ray,test_sphere);
+                if(hit_test.hit)
+                {
+                    if(hit_record.hit==false)
+                    {
+                        hit_record = hit_test;
+                    }
+                    else
+                    {
+                        if(hit_test.t<hit_record.t)
+                        {
+                            hit_record = hit_test;
+                        }
+                    }
+
+                }
+            }
+
+            //For each mesh
+            for (unsigned k=0;k<tri_meshes.size();k++)
+            {
+                for (unsigned a=0;a<tri_meshes[k].F.rows();a++) 
+                {
+                    
+                    triangle test_tri;
+                    test_tri.v1 = Vector3d(tri_meshes[k].V.row(tri_meshes[k].F.coeff(a,0)));
+                    test_tri.v2 = Vector3d(tri_meshes[k].V.row(tri_meshes[k].F.coeff(a,1)));
+                    test_tri.v3 = Vector3d(tri_meshes[k].V.row(tri_meshes[k].F.coeff(a,2)));
+                    test_tri.color = tri_meshes[k].color;
+                    test_tri.shader_type = tri_meshes[k].shader_type;
+                    hit_triangle hit_test2 = ray_hit_triangle(camera_ray,test_tri);
+                    if(hit_test2.hit)
+                    {
+                        if(hit_record2.hit == false)
+                        {
+                            hit_record2 = hit_test2;
+                        }
+                        else
+                        {
+                            if(hit_test2.t<hit_record2.t)
+                            {
+                                hit_record2 = hit_test2;
+                            }
+                        }
+                    }
+                }
+            }
+
+            //if hit is true, then do lighting calculations
+            if (hit_record.hit || hit_record2.hit)
+            {
+                string hit_type;
+                double t_int;
+                if(hit_record.hit && hit_record2.hit)
+                {
+                    if(hit_record.t<=hit_record2.t)
+                    {
+                        hit_type = "sphere";
+                        t_int = hit_record.t;
+                    }
+                    else
+                    {
+                        hit_type = "triangle";
+                        t_int = hit_record2.t;
+                    }
+                }
+                else
+                {
+                    if(hit_record.hit)
+                    {
+                        hit_type = "sphere";
+                        t_int = hit_record.t;
+                    }
+                    if(hit_record2.hit)
+                    {
+                        hit_type = "triangle";
+                        t_int = hit_record2.t;
+                    }
+                }
+                
+                
+                Vector3d ray_intersection = camera_ray.e + t_int * camera_ray.d;
+                
+                Vector3d ray_normal;
+                if(hit_type.compare("sphere")==0)
+                {
+                    ray_normal = (ray_intersection-hit_record.hit_obj.position)/hit_record.hit_obj.radius;
+                }
+                if(hit_type.compare("triangle")==0)
+                {
+                    Vector3d h1 = hit_record2.hit_obj.v1;
+                    Vector3d h2 = hit_record2.hit_obj.v2;
+                    Vector3d h3 = hit_record2.hit_obj.v3;
+                    ray_normal = ((h2-h1).cross(h3-h1)).normalized();
+                }
+
+                double color_intensity=0.0;
+
+                //for each light source
+                for(unsigned m=0;m<light_positions.rows();m++)
+                {
+                    Vector3d light_vector = (Vector3d(light_positions.row(m))-ray_intersection);
+                    ray shadow_ray;
+                    shadow_ray.e = ray_intersection;
+                    shadow_ray.d = light_vector;
+
+                    if(surface_light(shadow_ray, spheres, tri_meshes)==false)
+                    {
+                        light_vector = light_vector.normalized();
+                        // Simple diffuse model assuming light intensity I=1
+                        // Clamp to zero
+                        color_intensity = light_vector.transpose() * ray_normal;
+                        color_intensity = max(color_intensity,0.);
+                        if(hit_type.compare("sphere")==0)
+                        {
+                            //Specular shading, assuming Phong exponent p=100
+                            if(hit_record.hit_obj.shader_type=='s')
+                            {
+                                Vector3d half_vector=(-camera_ray.d+light_vector).normalized();
+                                color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
+                            }
+                        }
+                        if(hit_type.compare("triangle")==0)
                         {
                             //Specular shading, assuming Phong exponent p=100
                             if(hit_record2.hit_obj.shader_type=='s')

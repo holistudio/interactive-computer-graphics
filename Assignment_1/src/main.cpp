@@ -848,7 +848,7 @@ void task1_4(tri_mesh mesh_struct)
     Vector3d y_displacement;
 
     // Multiple Light Sources
-    MatrixXd light_positions(2,3);
+    MatrixXd light_positions(1,3);
     light_positions <<  5.0,  5.0,  5.0;
 
     // Ray intersection parameter

@@ -15,15 +15,16 @@
 using namespace std;
 using namespace Eigen;
 
-struct tri_mesh
+class tri_mesh
 {
     //basic triangular mesh
-    //V is a matrix (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
-    MatrixXd V;
-    //F is an matrix (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
-    MatrixXd F;
-    Vector3d color;
-    char shader_type;
+    public:
+        //V is a matrix (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
+        MatrixXd V;
+        //F is an matrix (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
+        MatrixXd F;
+        Vector3d color;
+        char shader_type;
 };
 
 std::ostream& operator<<(std::ostream &strm, const tri_mesh &a) {
@@ -1267,7 +1268,7 @@ int main()
     sphere2.radius = 0.1;
     sphere2.position = Vector3d(-0.6, 0.6, 0.6);
     sphere2.color = Vector3d(0, 255, 166);
-    sphere1.shader_type = 's';
+    sphere2.shader_type = 's';
 
     vector<sphere> spheres;
     spheres.push_back(sphere1);

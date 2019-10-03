@@ -960,14 +960,14 @@ void task1_4(tri_mesh mesh_struct)
     write_matrix_to_png(R,G,B,A,filename);
 }
 
-bool surface_light(ray r, vector<float> sphere_radii, MatrixXd sphere_centers, vector<tri_mesh> tri_meshes)
+bool surface_light(ray r, vector<sphere> spheres, vector<tri_mesh> tri_meshes)
 {
     double t1 = 0;
     double epsilon = 0.001;
-    for (unsigned k=0;k<sphere_radii.size();k++)
+    for (unsigned k=0;k<spheres.size();k++)
     {
-        const double sphere_radius = sphere_radii[k];
-        Vector3d sphere_center(sphere_centers.coeffRef(k, 0),sphere_centers.coeffRef(k, 1),sphere_centers.coeffRef(k, 2));
+        const double sphere_radius = spheres[k].radius;
+        Vector3d sphere_center = spheres[k].position;
 
         //Calculate discriminant
         Vector3d e_c = r.e - sphere_center;
@@ -1028,7 +1028,7 @@ bool surface_light(ray r, vector<float> sphere_radii, MatrixXd sphere_centers, v
     return false;
 }
 
-void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd sphere_colors, vector<char> sphere_shading, vector<tri_mesh> tri_meshes)
+void task1_5(vector<sphere> spheres, vector<tri_mesh> tri_meshes)
 {
     std::cout << "Task 1.5: Shadows" << std::endl;
     //camera coordinates
@@ -1070,13 +1070,13 @@ void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
             hit_triangle hit_record2;
 
             // For each sphere
-            for (unsigned k=0;k<sphere_radii.size();k++)
+            for (unsigned k=0;k<spheres.size();k++)
             {
                 sphere test_sphere;
-                test_sphere.radius = sphere_radii[k];
-                test_sphere.position = Vector3d (sphere_centers.coeffRef(k, 0),sphere_centers.coeffRef(k, 1),sphere_centers.coeffRef(k, 2));
-                test_sphere.color = Vector3d (sphere_colors.coeffRef(k, 0),sphere_colors.coeffRef(k, 1),sphere_colors.coeffRef(k, 2));;
-                test_sphere.shader_type = sphere_shading[k];
+                test_sphere.radius = spheres[k].radius;
+                test_sphere.position = spheres[k].position;
+                test_sphere.color = spheres[k].color;
+                test_sphere.shader_type = spheres[k].shader_type;
                 hit_sphere hit_test = ray_hit_sphere(camera_ray,test_sphere);
                 if(hit_test.hit)
                 {
@@ -1183,7 +1183,7 @@ void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
                     shadow_ray.e = ray_intersection;
                     shadow_ray.d = light_vector;
 
-                    if(surface_light(shadow_ray,sphere_radii,sphere_centers, tri_meshes)==false)
+                    if(surface_light(shadow_ray, spheres, tri_meshes)==false)
                     {
                         light_vector = light_vector.normalized();
                         // Simple diffuse model assuming light intensity I=1
@@ -1255,6 +1255,24 @@ int main()
     vector<char> sphere_shading;
     sphere_shading.push_back('d');
     sphere_shading.push_back('s');
+
+    sphere sphere1;
+    sphere sphere2;
+
+    sphere1.radius = 0.5;
+    sphere1.position = Vector3d(0,0,0);
+    sphere1.color = Vector3d(66, 135, 245);
+    sphere1.shader_type = 'd';
+
+    sphere2.radius = 0.1;
+    sphere2.position = Vector3d(-0.6, 0.6, 0.6);
+    sphere2.color = Vector3d(0, 255, 166);
+    sphere1.shader_type = 's';
+
+    vector<sphere> spheres;
+    spheres.push_back(sphere1);
+    spheres.push_back(sphere2);
+
     //task1_2(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
     //task1_3(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
 
@@ -1266,11 +1284,11 @@ int main()
 
     //add mesh to mesh array
 
-    task1_4(test_mesh);
+    //task1_4(test_mesh);
     
     vector<tri_mesh> tri_meshes;
     tri_meshes.push_back(ground_plane);
-    //task1_5(spheresRadii,spheresCenters,spheres_colors,sphere_shading, tri_meshes);
+    task1_5(spheres, tri_meshes);
     
     return 0;
 }

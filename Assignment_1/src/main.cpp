@@ -719,60 +719,59 @@ class triangle: public model
         Vector3d v3;
 };
 
-class hit_object
+class hit_sphere
 {
     public:
         bool hit = false;
         double t;
-        model hit_object;
+        sphere hit_obj;
 };
 
-// hit_object ray_hit(ray r, sphere m, string sphere_or_triangle)
-// {
-//     hit_object test;
-//     if(sphere_or_triangle.compare("sphere")==0)
-//     {
-//         const double sphere_radius = sphere(m).radius;
-//         Vector3d sphere_center = m.getPosition();
+hit_sphere ray_hit_sphere(ray r, sphere test_sphere)
+{
+    hit_sphere test;
+    const double sphere_radius = test_sphere.radius;
+    Vector3d sphere_center = test_sphere.getPosition();
 
-//         //Calculate discriminant
-//         Vector3d e_c = r.e - sphere_center;
-//         //quadratic equation
-//         double a = ray_direction.dot(r.d);
-//         double b = ray_direction.dot(e_c);
-//         double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
+    //Calculate discriminant
+    Vector3d e_c = r.e - sphere_center;
+    //quadratic equation
+    double a = r.d.dot(r.d);
+    double b = r.d.dot(e_c);
+    double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
 
-//         //discriminant
-//         double discriminant = b*b - a*c;
+    //discriminant
+    double discriminant = b*b - a*c;
 
-//         if(discriminant>=0)
-//         {
-//             //if discriminant is greater than or equal to 0
-//             //Calculate sphere intersection parameter, t_new
-//             if(discriminant ==0)
-//             {
-//                 t_new = -b/a;
-//             }
-//             else
-//             {
-//                 t_new = (-b - sqrt(discriminant)) / a;
-//                 if(t_new < 0)
-//                 {
-//                     t_new = (-b + sqrt(discriminant)) / a;
-//                 }
-//                 else
-//                 {
-//                     double t2 = (-b + sqrt(discriminant)) / a;
-//                     if (t2>0 && t2<t_new)
-//                     {
-//                         t_new = t2;
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     return test;
-// }
+    if(discriminant>=0)
+    {
+        test.hit = true;
+        test.hit_obj = test_sphere;
+        //if discriminant is greater than or equal to 0
+        //Calculate sphere intersection parameter, test.t
+        if(discriminant ==0)
+        {
+            test.t = -b/a;
+        }
+        else
+        {
+            test.t = (-b - sqrt(discriminant)) / a;
+            if(test.t < 0)
+            {
+                test.t = (-b + sqrt(discriminant)) / a;
+            }
+            else
+            {
+                double t2 = (-b + sqrt(discriminant)) / a;
+                if (t2>0 && t2<test.t)
+                {
+                    test.t = t2;
+                }
+            }
+        }
+    }
+    return test;
+}
 
 void task1_4(tri_mesh mesh_struct)
 {
@@ -1096,8 +1095,8 @@ void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
                     {
                         light_vector = light_vector.normalized();
                         // Simple diffuse model assuming light intensity I=1
-                        color_intensity = light_vector.transpose() * ray_normal;
                         // Clamp to zero
+                        color_intensity = light_vector.transpose() * ray_normal;
                         color_intensity = max(color_intensity,0.);
 
                         //Specular shading, assuming Phong exponent p=100
@@ -1137,7 +1136,7 @@ int main()
     spheresRadii.push_back(0.1);
     spheresCenters << 0, 0, 0,
                       -0.6, 0.6, 0.6;
-    task1_1(spheresRadii,spheresCenters);
+    //task1_1(spheresRadii,spheresCenters);
     MatrixXd spheres_colors(2,3); //in RGB
     spheres_colors << 66, 135, 245,
                      0, 255, 166;

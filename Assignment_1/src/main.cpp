@@ -1201,7 +1201,7 @@ void task1_5(vector<sphere> spheres, vector<tri_mesh> tri_meshes)
                                 color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
                             }
                         }
-                        if(hit_type.compare("triange")==0)
+                        if(hit_type.compare("triangle")==0)
                         {
                             //Specular shading, assuming Phong exponent p=100
                             if(hit_record2.hit_obj.shader_type=='s')

@@ -701,9 +701,6 @@ class model
         Vector3d position;
         Vector3d color;
         char shader_type;
-        Vector3d getPosition(){
-            return position;
-        }
 };
 
 class sphere: public model
@@ -726,6 +723,14 @@ class hit_sphere
         bool hit = false;
         double t;
         sphere hit_obj;
+};
+
+class hit_triangle
+{
+    public:
+        bool hit = false;
+        double t;
+        triangle hit_obj;
 };
 
 hit_sphere ray_hit_sphere(ray r, sphere test_sphere)
@@ -774,6 +779,46 @@ hit_sphere ray_hit_sphere(ray r, sphere test_sphere)
     return test;
 }
 
+hit_triangle ray_hit_triangle(ray r, triangle test_triangle)
+{
+    hit_triangle test;
+    Vector3d v1 = test_triangle.v1;
+    Vector3d v2 = test_triangle.v2;
+    Vector3d v3 = test_triangle.v3;
+    //Cramer's rule
+    double a = v1.coeff(0) - v2.coeff(0);
+    double b = v1.coeff(1) - v2.coeff(1);
+    double c = v1.coeff(2) - v2.coeff(2);
+    double d = v1.coeff(0) - v3.coeff(0);
+    double e = v1.coeff(1) - v3.coeff(1);
+    double f = v1.coeff(2) - v3.coeff(2);
+    double g = r.d.coeff(0);
+    double h = r.d.coeff(1);
+    double i = r.d.coeff(2);
+    double j = v1.coeff(0)-r.e.coeff(0);
+    double k = v1.coeff(1)-r.e.coeff(1);
+    double l = v1.coeff(2)-r.e.coeff(2);
+
+    double ei_minus_hf = e*i - h*f;
+    double gf_minus_di = g*f - d*i;
+    double dh_minus_eg = d*h - e*g;
+
+    double M = a*(ei_minus_hf) + b*(gf_minus_di) + c*(dh_minus_eg);
+    double t = -(f*(a*k-j*b)+e*(j*c-a*l)+d*(b*l-k*c))/M;
+    if(t<0)
+    {
+        return test;
+    }
+    double gamma = (i*(a*k-j*b)+h*(j*c-a*l)+g*(b*l-k*c))/M;
+    if(gamma < 0 || gamma >1){
+        return test;
+    }
+    double beta = (j*ei_minus_hf+k*gf_minus_di+l*dh_minus_eg)/M;
+    if(beta < 0  || beta > 1-gamma){
+        return test;
+    }
+    return test;
+}
 void task1_4(tri_mesh mesh_struct)
 {
     //TODO: task1_4 needs to take an array of mesh structures
@@ -985,9 +1030,6 @@ void task1_5(vector<float> sphere_radii, MatrixXd sphere_centers, MatrixXd spher
     MatrixXd light_positions(2,3);
     light_positions <<  -2.0,  2.0,  2.0,
                          1.0, -1.0, -1.0;
-
-
-    
 
     // For each ray with direction -w
     for (unsigned i=0;i<R.cols();i++)

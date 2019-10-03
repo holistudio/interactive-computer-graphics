@@ -1019,7 +1019,10 @@ bool surface_light(ray r, vector<float> sphere_radii, MatrixXd sphere_centers, v
             hit_triangle hit_test2 = ray_hit_triangle(r,test_tri);
             if(hit_test2.hit)
             {
-                return true;
+                if(hit_test2.t > epsilon)
+                {
+                    return true;
+                }
             }
         }
     }

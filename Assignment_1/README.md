@@ -74,4 +74,4 @@ If only changes are made to the files, only the last two lines of terminal comma
 
 # References
 
-Fundamentals of Computer Graphics
+Fundamentals of Computer Graphics by Marschner and Shirley Chapter 4 was a huge help for this.

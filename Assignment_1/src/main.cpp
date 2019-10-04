@@ -711,8 +711,8 @@ void task1_4(vector<sphere> spheres, vector<tri_mesh> tri_meshes)
 
     // Multiple Light Sources
     MatrixXd light_positions(2,3);
-    light_positions <<  5.0,  5.0,  5.0,
-        -6.0, -6.0, 5.0;
+    light_positions <<  -2.0,  2.0,  2.0,
+                         1.0, -1.0, -1.0;
 
     // For each ray with direction -w
     for (unsigned i=0;i<R.cols();i++)
@@ -833,7 +833,7 @@ void task1_4(vector<sphere> spheres, vector<tri_mesh> tri_meshes)
                     ray_normal = ((h2-h1).cross(h3-h1)).normalized();
                 }
 
-                double color_intensity=0.0;
+                double color_intensity=0.1;
 
                 //for each light source
                 for(unsigned m=0;m<light_positions.rows();m++)

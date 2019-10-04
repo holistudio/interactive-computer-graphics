@@ -265,7 +265,7 @@ void task1_1(vector<sphere> spheres)
     Vector3d y_displacement;
 
     // Single light source
-    const Vector3d light_position(-2.0,  2.0,  2.0);
+    const Vector3d light_position(-2.0, 2.0, 2.0);
 
     // For each ray with direction -w
     for (unsigned i=0;i<C.cols();i++)
@@ -309,38 +309,28 @@ void task1_1(vector<sphere> spheres)
             }
             if (hit_record.hit)
             {
-                string hit_type;
                 double t_int = hit_record.t;
 
                 Vector3d ray_intersection = camera_ray.e + t_int * camera_ray.d;
                 
                 Vector3d ray_normal;
-                if(hit_type.compare("sphere")==0)
-                {
-                    ray_normal = (ray_intersection-hit_record.hit_obj.position)/hit_record.hit_obj.radius;
-                }
+
+                ray_normal = (ray_intersection-hit_record.hit_obj.position)/hit_record.hit_obj.radius;
 
                 double color_intensity=0.0;
 
-                    Vector3d light_vector = light_position-ray_intersection;
-                    ray shadow_ray;
-                    shadow_ray.e = ray_intersection;
-                    shadow_ray.d = light_vector;
+                Vector3d light_vector = light_position-ray_intersection;
+                ray shadow_ray;
+                shadow_ray.e = ray_intersection;
+                shadow_ray.d = light_vector;
 
-                    light_vector = light_vector.normalized();
-                    // Simple diffuse model assuming light intensity I=1
-                    // Clamp to zero
-                    color_intensity = light_vector.transpose() * ray_normal;
-                    color_intensity = max(color_intensity,0.);
-
-                    //Specular shading, assuming Phong exponent p=100
-                    if(hit_record.hit_obj.shader_type=='s')
-                    {
-                        Vector3d half_vector=(-camera_ray.d+light_vector).normalized();
-                        color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
-                    }
-                
-                    C(i,j) = C(i,j)+color_intensity;
+                light_vector = light_vector.normalized();
+                // Simple diffuse model assuming light intensity I=1
+                // Clamp to zero
+                color_intensity = light_vector.transpose() * ray_normal;
+                color_intensity = max(color_intensity,0.);
+            
+                C(i,j) = C(i,j)+color_intensity;
 
 
                 // Disable the alpha mask for this pixel

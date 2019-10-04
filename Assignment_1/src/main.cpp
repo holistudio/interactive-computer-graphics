@@ -1501,7 +1501,7 @@ int main()
 
     //tri_mesh test_mesh = load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),1/4.5);
     tri_mesh test_mesh = load_mesh("../data/bunny.off",Vector3d(-0.3,0,0.5),3);
-
+    test_mesh.color = Vector3d(245, 226, 20);
     //add mesh to mesh array
 
     //task1_4(test_mesh);

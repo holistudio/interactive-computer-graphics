@@ -267,15 +267,6 @@ void task1_1(vector<sphere> spheres)
     // Single light source
     const Vector3d light_position(-2.0,  2.0,  2.0);
 
-    // Ray intersection parameter
-    double t1 = 0;
-    double t_new = 0;
-    bool hit = false;
-
-    //hit sphere (cx, cy, cz, R)
-    double hit_sphere_radius;
-    Vector3d hit_sphere_center;
-
     // For each ray with direction -w
     for (unsigned i=0;i<C.cols();i++)
     {
@@ -284,86 +275,73 @@ void task1_1(vector<sphere> spheres)
             // Prepare the ray
             x_displacement = Vector3d(l+(r-l)*(i)/C.cols(),0,0);
             y_displacement = Vector3d(0,t-(t-b)*(j)/C.rows(),0);
-            Vector3d ray_origin = cam_origin + x_displacement + y_displacement;
-            Vector3d ray_direction = Vector3d(0,0,-1);
-            hit = false;
+            
+            ray camera_ray;
+            camera_ray.e = cam_origin + x_displacement + y_displacement;
+            camera_ray.d = Vector3d(0,0,-1);
+
+            hit_sphere hit_record;
 
             // For each sphere
             for (unsigned k=0;k<spheres.size();k++)
             {
-
-                const double sphere_radius = spheres[k].radius;
-                Vector3d sphere_center=spheres[k].position;
-
-                //Calculate discriminant
-                Vector3d e_c = ray_origin - sphere_center;
-                //quadratic equation
-                double a = ray_direction.dot(ray_direction);
-                double b = ray_direction.dot(e_c);
-                double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
-
-                //discriminant
-                double discriminant = b*b - a*c;
-
-                if(discriminant>=0)
+                sphere test_sphere;
+                test_sphere.radius = spheres[k].radius;
+                test_sphere.position = spheres[k].position;
+                test_sphere.color = spheres[k].color;
+                test_sphere.shader_type = spheres[k].shader_type;
+                hit_sphere hit_test = ray_hit_sphere(camera_ray,0,test_sphere);
+                if(hit_test.hit)
                 {
-                    //if discriminant is greater than or equal to 0
-                    //Calculate sphere intersection parameter, t_new
-                    if(discriminant ==0)
+                    if(hit_record.hit==false)
                     {
-                        t_new = -b/a;
+                        hit_record = hit_test;
                     }
                     else
                     {
-                        t_new = (-b - sqrt(discriminant)) / a;
-                        if(t_new < 0)
+                        if(hit_test.t<hit_record.t)
                         {
-                            t_new = (-b + sqrt(discriminant)) / a;
-                        }
-                        else
-                        {
-                            double t2 = (-b + sqrt(discriminant)) / a;
-                            if (t2>0 && t2<t_new)
-                            {
-                                t_new = t2;
-                            }
-                        }
-                    }
-
-                    if(hit == false)
-                    {
-                        //this must be the first ray hit
-                        t1 = t_new;
-                        hit_sphere_center = sphere_center;
-                        hit_sphere_radius = sphere_radius;
-                        hit = true;
-                    }
-                    else
-                    {
-                        //this means there's already a hit from another sphere
-                        //If that t is less than stored t, then replace stored t with the new t
-                        if(t_new<t1)
-                        {
-                            t1 = t_new;
-                            hit_sphere_center = sphere_center;
-                            hit_sphere_radius = sphere_radius;
+                            hit_record = hit_test;
                         }
                     }
 
                 }
-
             }
-            //if hit is true, then do lighting calculations
-            if (hit == true)
+            if (hit_record.hit)
             {
-                Vector3d ray_intersection = ray_origin + t1 * ray_direction;
-                Vector3d ray_normal = (ray_intersection-hit_sphere_center)/hit_sphere_radius;
+                string hit_type;
+                double t_int = hit_record.t;
 
-                // Simple diffuse model
-                C(i,j) = (light_position-ray_intersection).normalized().transpose() * ray_normal;
+                Vector3d ray_intersection = camera_ray.e + t_int * camera_ray.d;
+                
+                Vector3d ray_normal;
+                if(hit_type.compare("sphere")==0)
+                {
+                    ray_normal = (ray_intersection-hit_record.hit_obj.position)/hit_record.hit_obj.radius;
+                }
 
-                // Clamp to zero
-                C(i,j) = max(C(i,j),0.);
+                double color_intensity=0.0;
+
+                    Vector3d light_vector = light_position-ray_intersection;
+                    ray shadow_ray;
+                    shadow_ray.e = ray_intersection;
+                    shadow_ray.d = light_vector;
+
+                    light_vector = light_vector.normalized();
+                    // Simple diffuse model assuming light intensity I=1
+                    // Clamp to zero
+                    color_intensity = light_vector.transpose() * ray_normal;
+                    color_intensity = max(color_intensity,0.);
+
+                    //Specular shading, assuming Phong exponent p=100
+                    if(hit_record.hit_obj.shader_type=='s')
+                    {
+                        Vector3d half_vector=(-camera_ray.d+light_vector).normalized();
+                        color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
+                    }
+                
+                    C(i,j) = C(i,j)+color_intensity;
+
 
                 // Disable the alpha mask for this pixel
                 A(i,j) = 1;

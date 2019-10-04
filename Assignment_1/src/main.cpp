@@ -1500,7 +1500,7 @@ int main()
     tri_mesh ground_plane = load_mesh("../data/ground_plane.off",Vector3d(0,0,0),1.0);;
 
     //tri_mesh test_mesh = load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),1/4.5);
-    tri_mesh test_mesh = load_mesh("../data/bunny.off",Vector3d(0,0,1),4);
+    tri_mesh test_mesh = load_mesh("../data/bunny.off",Vector3d(-0.3,0,0.5),3);
 
     //add mesh to mesh array
 

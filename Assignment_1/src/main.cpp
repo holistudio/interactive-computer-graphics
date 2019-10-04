@@ -364,7 +364,7 @@ void task1_2(vector<sphere> spheres)
 
     // Multiple Light Sources
     MatrixXd light_positions(2,3);
-    light_positions <<  -0.8,  1.0,  1.2,
+    light_positions <<  -2.0, 2.0, 2.0,
                          1.0, -1.0, -1.0;
 
     // For each ray with direction -w
@@ -419,7 +419,7 @@ void task1_2(vector<sphere> spheres)
 
                 double color_intensity=0.0;
 
-                double ambient_light = 0.1;
+                
 
                 //for each light source
                 for(unsigned m=0;m<light_positions.rows();m++)
@@ -441,6 +441,8 @@ void task1_2(vector<sphere> spheres)
                     B(i,j) = B(i,j)+color_intensity;
                 }
 
+                //ambient light
+                double ambient_light = 0.1;
                 R(i,j)=R(i,j)+ambient_light;
                 G(i,j)=G(i,j)+ambient_light;
                 B(i,j)=B(i,j)+ambient_light;
@@ -478,25 +480,14 @@ void task1_3(vector<sphere> spheres)
 
     // Perspective, pointing in the direction -z and covering the unit square (-1,1) in x and y
     Vector3d cam_origin(0,0,2);
-    Vector3d cam_d = Vector3d(0,0,-1.5);
+    Vector3d cam_d = Vector3d(0,0,-1.5); //focal point is 0.5 behind image plane
     Vector3d x_displacement;
     Vector3d y_displacement;
 
     // Multiple Light Sources
     MatrixXd light_positions(2,3);
-    light_positions <<  -0.8,  1.0,  1.2,
+    light_positions <<  -2.0, 2.0, 2.0,
                          1.0, -1.0, -1.0;
-
-    // Ray intersection parameter
-    double t1 = 0;
-    double t_new = 0;
-    bool hit = false;
-
-    //hit sphere properties
-    double hit_sphere_radius;
-    Vector3d hit_sphere_center;
-    Vector3d hit_sphere_color;
-    char hit_sphere_shading;
 
     // For each ray with direction -w
     for (unsigned i=0;i<R.cols();i++)
@@ -506,98 +497,65 @@ void task1_3(vector<sphere> spheres)
             // Prepare the ray, perspective camera
             x_displacement = Vector3d(l+(r-l)*(i)/R.cols(),0,0);
             y_displacement = Vector3d(0,t-(t-b)*(j)/R.rows(),0);
-            Vector3d ray_origin = cam_origin;
-            Vector3d ray_direction = cam_d+x_displacement+y_displacement;
-            hit = false;
+
+            ray camera_ray;
+            camera_ray.e = cam_origin;
+            camera_ray.d = cam_d+x_displacement+y_displacement;
+
+            hit_sphere hit_record;
 
             // For each sphere
             for (unsigned k=0;k<spheres.size();k++)
             {
-                const double sphere_radius = spheres[k].radius;
-                Vector3d sphere_center = spheres[k].position;
-
-                //Calculate discriminant
-                Vector3d e_c = ray_origin - sphere_center;
-                //quadratic equation
-                double a = ray_direction.dot(ray_direction);
-                double b = ray_direction.dot(e_c);
-                double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
-
-                //discriminant
-                double discriminant = b*b - a*c;
-
-                if(discriminant>=0)
+                sphere test_sphere;
+                test_sphere.radius = spheres[k].radius;
+                test_sphere.position = spheres[k].position;
+                test_sphere.color = spheres[k].color;
+                test_sphere.shader_type = spheres[k].shader_type;
+                hit_sphere hit_test = ray_hit_sphere(camera_ray,0,test_sphere);
+                if(hit_test.hit)
                 {
-                    //if discriminant is greater than or equal to 0
-                    //Calculate sphere intersection parameter, t_new
-                    if(discriminant ==0)
+                    if(hit_record.hit==false)
                     {
-                        t_new = -b/a;
+                        hit_record = hit_test;
                     }
                     else
                     {
-                        t_new = (-b - sqrt(discriminant)) / a;
-                        if(t_new < 0)
+                        if(hit_test.t<hit_record.t)
                         {
-                            t_new = (-b + sqrt(discriminant)) / a;
-                        }
-                        else
-                        {
-                            double t2 = (-b + sqrt(discriminant)) / a;
-                            if (t2>0 && t2<t_new)
-                            {
-                                t_new = t2;
-                            }
+                            hit_record = hit_test;
                         }
                     }
-                    if(hit == false)
-                    {
-                        //this must be the first ray hit
-                        t1 = t_new;
-                        hit_sphere_center = sphere_center;
-                        hit_sphere_radius = sphere_radius;
-                        hit_sphere_color = spheres[k].color;
-                        hit_sphere_shading = spheres[k].shader_type;
-                        hit = true;
-                    }
-                    else
-                    {
-                        //this means there's already a hit from another sphere
-                        //If that t is less than stored t, then replace stored t with the new t
-                        if(t_new<t1)
-                        {
-                            t1 = t_new;
-                            hit_sphere_center = sphere_center;
-                            hit_sphere_radius = sphere_radius;
-                            hit_sphere_color = spheres[k].color;
-                            hit_sphere_shading = spheres[k].shader_type;
-                        }
-                    }
-                }
 
+                }
             }
 
             //if hit is true, then do lighting calculations
-            if (hit == true)
+            if (hit_record.hit)
             {
-                Vector3d ray_intersection = ray_origin + t1 * ray_direction;
-                Vector3d ray_normal = (ray_intersection-hit_sphere_center)/hit_sphere_radius;
+                double t_int = hit_record.t;
+
+                Vector3d ray_intersection = camera_ray.e + t_int * camera_ray.d;
+                
+                Vector3d ray_normal = (ray_intersection-hit_record.hit_obj.position)/hit_record.hit_obj.radius;
+
                 double color_intensity=0.0;
+
+                
 
                 //for each light source
                 for(unsigned m=0;m<light_positions.rows();m++)
                 {
-                    Vector3d light_vector = (Vector3d(light_positions.row(m))-ray_intersection).normalized();
-                    
                     // Simple diffuse model assuming light intensity I=1
+                    Vector3d light_vector = (Vector3d(light_positions.row(m))-ray_intersection).normalized();
                     color_intensity = light_vector.transpose() * ray_normal;
                     // Clamp to zero
                     color_intensity = max(color_intensity,0.);
 
                     //Specular shading, assuming Phong exponent p=100
-                    if(hit_sphere_shading=='s')
+                    if(hit_record.hit_obj.shader_type=='s')
                     {
-                        Vector3d half_vector=(-ray_direction+light_vector).normalized();
+                        Vector3d half_vector=(-camera_ray.d+light_vector).normalized();
                         color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
                     }
                     R(i,j) = R(i,j)+color_intensity;
@@ -605,11 +563,17 @@ void task1_3(vector<sphere> spheres)
                     B(i,j) = B(i,j)+color_intensity;
                 }
 
+                //ambient light
+                double ambient_light = 0.1;
+                R(i,j)=R(i,j)+ambient_light;
+                G(i,j)=G(i,j)+ambient_light;
+                B(i,j)=B(i,j)+ambient_light;
+
                 //adjust RGB based on the hit sphere's color
                 //assume kd and ks are same, based on RGB values provided in arguments
-                R(i,j)=R(i,j)*hit_sphere_color.coeff(0)/255;
-                G(i,j)=G(i,j)*hit_sphere_color.coeff(1)/255;
-                B(i,j)=B(i,j)*hit_sphere_color.coeff(2)/255;
+                R(i,j)=R(i,j)*hit_record.hit_obj.color.coeff(0)/255;
+                G(i,j)=G(i,j)*hit_record.hit_obj.color.coeff(1)/255;
+                B(i,j)=B(i,j)*hit_record.hit_obj.color.coeff(2)/255;
 
                 // Disable the alpha mask for this pixel
                 A(i,j) = 1;
@@ -1442,9 +1406,9 @@ int main()
     spheres.push_back(sphere2);
     spheres.push_back(sphere3);
 
-    //task1_1(spheres);
+    task1_1(spheres);
     task1_2(spheres);
-    //task1_3(spheres);
+    task1_3(spheres);
 
     tri_mesh ground_plane = load_mesh("../data/ground_plane.off",Vector3d(0,0,0),1.0);;
 

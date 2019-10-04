@@ -687,43 +687,6 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
     }
 }
 
-double tri_intersection(ray r, Vector3d v1, Vector3d v2, Vector3d v3)
-{
-    //Cramer's rule
-    double a = v1[0] - v2[0];
-    double b = v1[1] - v2[1];
-    double c = v1[2] - v2[2];
-    double d = v1[0] - v3[0];
-    double e = v1[1] - v3[1];
-    double f = v1[2] - v3[2];
-    double g = r.d[0];
-    double h = r.d[1];
-    double i = r.d[2];
-    double j = v1[0]-r.e[0];
-    double k = v1[1]-r.e[1];
-    double l = v1[2]-r.e[2];
-
-    double ei_minus_hf = e*i - h*f;
-    double gf_minus_di = g*f - d*i;
-    double dh_minus_eg = d*h - e*g;
-
-    double M = a*(ei_minus_hf) + b*(gf_minus_di) + c*(dh_minus_eg);
-    double t = -(f*(a*k-j*b)+e*(j*c-a*l)+d*(b*l-k*c))/M;
-    if(t<0)
-    {
-        return -1;
-    }
-    double gamma = (i*(a*k-j*b)+h*(j*c-a*l)+g*(b*l-k*c))/M;
-    if(gamma < 0 || gamma >1){
-        return -1;
-    }
-    double beta = (j*ei_minus_hf+k*gf_minus_di+l*dh_minus_eg)/M;
-    if(beta < 0  || beta > 1-gamma){
-        return -1;
-    }
-    return t;
-}
-
 void task1_4(vector<sphere> spheres, vector<tri_mesh> tri_meshes)
 {
     //TODO: task1_4 needs to take an array of mesh structures
@@ -735,10 +698,10 @@ void task1_4(vector<sphere> spheres, vector<tri_mesh> tri_meshes)
     double b = -1.0;
 
     const std::string filename("task1_4.png");
-    MatrixXd R = MatrixXd::Zero(500,500); // Store the red
-    MatrixXd G = MatrixXd::Zero(500,500); // green
-    MatrixXd B = MatrixXd::Zero(500,500); // blue
-    MatrixXd A = MatrixXd::Zero(500,500); // Store the alpha mask
+    MatrixXd R = MatrixXd::Zero(800,800); // Store the red
+    MatrixXd G = MatrixXd::Zero(800,800); // green
+    MatrixXd B = MatrixXd::Zero(800,800); // blue
+    MatrixXd A = MatrixXd::Zero(800,800); // Store the alpha mask
 
     // Perspective, pointing in the direction -z and covering the unit square (-1,1) in x and y
     Vector3d cam_origin(0,0,2);
@@ -1484,12 +1447,12 @@ int main()
     spheres.push_back(sphere2);
     spheres.push_back(sphere3);
 
-    //task1_1(spheres);
-    //task1_2(spheres);
-    //task1_3(spheres);
+    task1_1(spheres);
+    task1_2(spheres);
+    task1_3(spheres);
 
     vector<tri_mesh> tri_meshes;
-    tri_mesh bumpy_mesh = load_mesh("../data/bumpy_cube.off",Vector3d(0.3,0,0),1/4.5);
+    tri_mesh bumpy_mesh = load_mesh("../data/bumpy_cube.off",Vector3d(0.5,0,0),1/4.5/4);
     tri_mesh bunny_mesh = load_mesh("../data/bunny.off",Vector3d(-0.3,0,0.5),3);
     bunny_mesh.color = Vector3d(245, 226, 20);
 

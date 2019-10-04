@@ -1,19 +1,19 @@
-# Task 1.1
+# Shading Spheres - Orthographic Projection
 <img src="img/task1_1.png" width="500">
 
-# Task 1.2
+# Ambient, Diffuse, and Specular Lighting - Orthographic Projection
 <img src="img/task1_2.png" width="500">
 
-# Task 1.3
+# Perspective Projection
 <img src="img/task1_3.png" width="500">
 
-# Task 1.4
-<img src="img/task1_4_6-6 square view.png" width="500">
+# Triangular Meshes
+<img src="img/task1_4.png" width="500">
 
-# Task 1.5
+# Shadows
 <img src="img/task1_5.png" width="500">
 
-# Task 1.6
+# Ground Plane Mirror
 <img src="img/task1_6.png" width="500">
 
 # Challenges

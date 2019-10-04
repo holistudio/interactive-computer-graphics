@@ -1502,9 +1502,10 @@ int main()
 
     sphere sphere1;
     sphere sphere2;
+    sphere sphere3;
 
     sphere1.radius = 0.5;
-    sphere1.position = Vector3d(0,0,0);
+    sphere1.position = Vector3d(0,0.5,0);
     sphere1.color = Vector3d(66, 135, 245);
     sphere1.shader_type = 'd';
 
@@ -1513,9 +1514,15 @@ int main()
     sphere2.color = Vector3d(0, 255, 166);
     sphere2.shader_type = 's';
 
+    sphere3.radius = 0.3;
+    sphere3.position = Vector3d(0.3, 0.3, 0.3);
+    sphere3.color = Vector3d(255, 0, 255);
+    sphere3.shader_type = 's';
+
     vector<sphere> spheres;
     spheres.push_back(sphere1);
     spheres.push_back(sphere2);
+    spheres.push_back(sphere3);
 
     //task1_2(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
     //task1_3(spheresRadii,spheresCenters,spheres_colors,sphere_shading);
@@ -1523,7 +1530,7 @@ int main()
     tri_mesh ground_plane = load_mesh("../data/ground_plane.off",Vector3d(0,0,0),1.0);;
     //TODO: create a simple ground plane...in a separate OFF file.
 
-    tri_mesh test_mesh = load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),1/4.5);
+    //tri_mesh test_mesh = load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),1/4.5);
 
 
     //add mesh to mesh array

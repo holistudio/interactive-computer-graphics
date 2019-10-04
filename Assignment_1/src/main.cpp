@@ -1142,8 +1142,8 @@ void task1_5(vector<sphere> spheres, vector<tri_mesh> tri_meshes)
                     Vector3d h3 = hit_record2.hit_obj.v3;
                     ray_normal = ((h2-h1).cross(h3-h1)).normalized();
                 }
-
-                double color_intensity=0.0;
+                //ambient light
+                double color_intensity=0.1;
 
                 //for each light source
                 for(unsigned m=0;m<light_positions.rows();m++)
@@ -1331,7 +1331,8 @@ Vector4d raycolor(ray r, double t_lower, vector<sphere> spheres, vector<tri_mesh
                 }
             }
 
-            double color_intensity=0.0;
+            //ambient light
+            double color_intensity=0.1;
 
             //for each light source
             for(unsigned m=0;m<light_positions.rows();m++)
@@ -1366,9 +1367,6 @@ Vector4d raycolor(ray r, double t_lower, vector<sphere> spheres, vector<tri_mesh
                                 color_intensity = color_intensity + pow(max(ray_normal.dot(half_vector),0.),100);
                             }
                             rgba = rgba + color_intensity * Vector4d::Ones();
-                            rgba(0) = rgba.coeff(0)*hit_record2.hit_obj.color.coeff(0)/255;
-                            rgba(1) = rgba.coeff(1)*hit_record2.hit_obj.color.coeff(1)/255;
-                            rgba(2) = rgba.coeff(2)*hit_record2.hit_obj.color.coeff(2)/255;
                         }
                         else
                         {
@@ -1382,11 +1380,7 @@ Vector4d raycolor(ray r, double t_lower, vector<sphere> spheres, vector<tri_mesh
                                 }
                             }
                             rgba = rgba + color_intensity * Vector4d::Ones();
-                            rgba(0) = rgba.coeff(0)*hit_record.hit_obj.color.coeff(0)/255;
-                            rgba(1) = rgba.coeff(1)*hit_record.hit_obj.color.coeff(1)/255;
-                            rgba(2) = rgba.coeff(2)*hit_record.hit_obj.color.coeff(2)/255;
                         }
-                        //TODO: think about where this should go
                         rgba(3) = 1;
                     }
                 }
@@ -1394,6 +1388,18 @@ Vector4d raycolor(ray r, double t_lower, vector<sphere> spheres, vector<tri_mesh
                 {
                     rgba(3) = 1;
                 }
+            }
+            if(hit_type.compare("triangle")==0)
+            {
+                rgba(0) = rgba.coeff(0)*hit_record2.hit_obj.color.coeff(0)/255;
+                rgba(1) = rgba.coeff(1)*hit_record2.hit_obj.color.coeff(1)/255;
+                rgba(2) = rgba.coeff(2)*hit_record2.hit_obj.color.coeff(2)/255;
+            }
+            if(hit_type.compare("sphere")==0)
+            {
+                rgba(0) = rgba.coeff(0)*hit_record.hit_obj.color.coeff(0)/255;
+                rgba(1) = rgba.coeff(1)*hit_record.hit_obj.color.coeff(1)/255;
+                rgba(2) = rgba.coeff(2)*hit_record.hit_obj.color.coeff(2)/255;
             }
         }
     }
@@ -1444,7 +1450,6 @@ void task1_6(vector<sphere> spheres, vector<tri_mesh> tri_meshes)
             G(i,j)=rgba.coeff(1);
             B(i,j)=rgba.coeff(2);
             A(i,j)=rgba.coeff(3);
-
         }
     }
     write_matrix_to_png(R,G,B,A,filename);
@@ -1484,22 +1489,22 @@ int main()
     //task1_3(spheres);
 
     vector<tri_mesh> tri_meshes;
-    tri_mesh bumpy_mesh = load_mesh("../data/bumpy_cube.off",Vector3d(0.3,0,0.5),1/4.5);
-    //tri_mesh bunny_mesh = load_mesh("../data/bunny.off",Vector3d(-0.3,0,0.5),3);
-    //bunny_mesh.color = Vector3d(245, 226, 20);
+    tri_mesh bumpy_mesh = load_mesh("../data/bumpy_cube.off",Vector3d(0.3,0,0),1/4.5);
+    tri_mesh bunny_mesh = load_mesh("../data/bunny.off",Vector3d(-0.3,0,0.5),3);
+    bunny_mesh.color = Vector3d(245, 226, 20);
 
     tri_meshes.push_back(bumpy_mesh);
-    // tri_meshes.push_back(bunny_mesh);
+    tri_meshes.push_back(bunny_mesh);
     task1_4(spheres,tri_meshes);
     
     tri_mesh ground_plane = load_mesh("../data/ground_plane.off",Vector3d(0,0,0),1.0);
     tri_meshes.push_back(ground_plane);
-    //task1_5(spheres, tri_meshes);
+    task1_5(spheres, tri_meshes);
 
     ground_plane.mirror=true;
     tri_meshes.pop_back();
     tri_meshes.push_back(ground_plane);
 
-    //task1_6(spheres,tri_meshes);
+    task1_6(spheres,tri_meshes);
     return 0;
 }

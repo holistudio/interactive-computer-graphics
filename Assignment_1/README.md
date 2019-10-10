@@ -65,7 +65,7 @@ cmake ../
 To compile the code:
 ```
 make
-./Assignment_1
+./Assignment1_bin
 ```
 
 Output image files should be in the build folder.

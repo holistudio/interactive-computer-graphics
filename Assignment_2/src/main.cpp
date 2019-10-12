@@ -15,15 +15,21 @@
 
 // Linear Algebra Library
 #include <Eigen/Core>
+using namespace Eigen;
 
 // Timer
 #include <chrono>
+
+#include <iostream>
 
 // VertexBufferObject wrapper
 VertexBufferObject VBO;
 
 // Contains the vertex positions
-Eigen::MatrixXf V(2,3);
+Eigen::MatrixXf V(2,1);
+
+bool tri_first = true;
+bool tri_complete = false;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -44,9 +50,28 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     double xworld = ((xpos/double(width))*2)-1;
     double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
 
-    // Update the position of the first vertex if the left button is pressed
+    // Add mouse click coordinates to V if the left button is pressed
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-        V.col(0) << xworld, yworld;
+    {
+        if(!tri_first)
+        {
+            V.conservativeResize(NoChange ,V.cols()+1);
+        }
+        else
+        {
+            tri_first = false;
+        }
+
+        //add vertex
+        V.col(V.cols()-1) << xworld, yworld;
+        
+        std::cout << V <<std::endl;
+        std::cout << "--" <<std::endl;
+        
+        //if V's number of columns is less than 3
+            //check if the last click is relatively close to first vertex
+                //now glDrawArrays
+    }
 
     // Upload the change to the GPU
     VBO.update(V);
@@ -90,10 +115,10 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 
     // On apple we have to load a core profile with forward compatibility
-#ifdef __APPLE__
+    #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
+    #endif
 
     // Create a windowed mode window and its OpenGL context
     window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
@@ -139,8 +164,8 @@ int main(void)
     // A VBO is a data container that lives in the GPU memory
     VBO.init();
 
-    V.resize(2,3);
-    V << 0,  0.5, -0.5, 0.5, -0.5, -0.5;
+    V.resize(2,1);
+    
     VBO.update(V);
 
     // Initialize the OpenGL Program
@@ -205,7 +230,9 @@ int main(void)
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Draw a triangle
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        // glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        glDrawArrays(GL_LINE_STRIP,0,V.cols());
 
         // Swap front and back buffers
         glfwSwapBuffers(window);

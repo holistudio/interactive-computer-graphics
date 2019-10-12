@@ -53,20 +53,19 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     // Add mouse click coordinates to V if the left button is pressed
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
+        //if it's not the first vertex, resize the matrix to allow one more vertex to be added
         if(!tri_first)
         {
             V.conservativeResize(NoChange ,V.cols()+1);
         }
         else
         {
+            //if it is the first vertex, no resizing is necessary, but should be recorded to allow for resizing in the future clicks
             tri_first = false;
         }
 
         //add vertex
         V.col(V.cols()-1) << xworld, yworld;
-        
-        std::cout << V <<std::endl;
-        std::cout << "--" <<std::endl;
         
         //if V's number of columns is less than 3
             //check if the last click is relatively close to first vertex

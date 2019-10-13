@@ -68,8 +68,21 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         V.col(V.cols()-1) << xworld, yworld;
         
         //if V's number of columns is less than 3
+        if(V.cols()%4==0)
+        {
             //check if the last click is relatively close to first vertex
-                //now glDrawArrays
+            Vector2f vertex0 = V.col(V.cols()-4);
+            Vector2f vertex2 = V.col(V.cols()-1);
+            float dist = (vertex0.coeffRef(0)-vertex2.coeffRef(0))*(vertex0.coeffRef(0)-vertex2.coeffRef(0)) + (vertex0.coeffRef(1)-vertex2.coeffRef(1))*(vertex0.coeffRef(1)-vertex2.coeffRef(1));
+            std::cout << dist << std::endl;
+            if(dist<0.0003)
+            {
+                //now glDrawArrays draws triangle instead
+                tri_complete=true;
+            }
+                
+        }
+            
     }
 
     // Upload the change to the GPU
@@ -229,9 +242,17 @@ int main(void)
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Draw a triangle
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
 
-        glDrawArrays(GL_LINE_STRIP,0,V.cols());
+        if(tri_complete)
+        {
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+        }
+        else
+        {
+            glDrawArrays(GL_LINE_STRIP,0,V.cols());
+        }
+        
+        
 
         // Swap front and back buffers
         glfwSwapBuffers(window);

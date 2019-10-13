@@ -24,13 +24,16 @@ using namespace Eigen;
 
 // VertexBufferObject wrapper
 VertexBufferObject VBO;
+VertexBufferObject tri_VBO;
 
 // Contains the vertex positions
 Eigen::MatrixXf V(2,1);
+Eigen::MatrixXf tri_V(2,1);
 
 bool tri_first = true;
 bool tri_complete = false;
 bool tri_insert_mode = false;
+//int num_triangles = 0;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -90,6 +93,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
         // Upload the change to the GPU
         VBO.update(V);
+        //tri_VBO.update(tri_V);
     }
 }
 
@@ -170,13 +174,19 @@ int main(void)
     VAO.init();
     VAO.bind();
 
+    VertexArrayObject tri_VAO;
+    tri_VAO.init();
+    tri_VAO.bind();
+
     // Initialize the VBO with the vertices data
     // A VBO is a data container that lives in the GPU memory
     VBO.init();
-
     V.resize(2,1);
-    
     VBO.update(V);
+
+    tri_VBO.init();
+    tri_V.resize(2,1);
+    tri_VBO.update(tri_V);
 
     // Initialize the OpenGL Program
     // A program controls the OpenGL pipeline and it must contains
@@ -241,13 +251,21 @@ int main(void)
 
         // Draw a triangle
 
+        //if num_triangles > 0
         if(tri_complete)
         {
+            //bind triangle VAO
+            //glBindVertexArray(tri_VAO);
             glDrawArrays(GL_TRIANGLES, 0, 3);
+            //glDrawArrays(GL_TRIANGLES, 0, 3*num_triangles);
+            //glBindVertexArray(0);
         }
-        else
+        else //remove else, this is done always or at least after first click
         {
+            //bind line VAO
+            //glBindVertexArray(tri_VAO);
             glDrawArrays(GL_LINE_STRIP,0,V.cols());
+            //glBindVertexArray(0);
         }
         
         

@@ -30,6 +30,7 @@ Eigen::MatrixXf V(2,1);
 
 bool tri_first = true;
 bool tri_complete = false;
+bool tri_insert_mode = false;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -38,55 +39,58 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-    // Get the position of the mouse in the window
-    double xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
-
-    // Get the size of the window
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-
-    // Convert screen position to world coordinates
-    double xworld = ((xpos/double(width))*2)-1;
-    double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
-
-    // Add mouse click coordinates to V if the left button is pressed
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+    if(tri_insert_mode == true)
     {
-        //if it's not the first vertex, resize the matrix to allow one more vertex to be added
-        if(!tri_first)
-        {
-            V.conservativeResize(NoChange ,V.cols()+1);
-        }
-        else
-        {
-            //if it is the first vertex, no resizing is necessary, but should be recorded to allow for resizing in the future clicks
-            tri_first = false;
-        }
+        // Get the position of the mouse in the window
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
 
-        //add vertex
-        V.col(V.cols()-1) << xworld, yworld;
-        
-        //if V's number of columns is less than 3
-        if(V.cols()%4==0)
+        // Get the size of the window
+        int width, height;
+        glfwGetWindowSize(window, &width, &height);
+
+        // Convert screen position to world coordinates
+        double xworld = ((xpos/double(width))*2)-1;
+        double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
+
+        // Add mouse click coordinates to V if the left button is pressed
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
         {
-            //check if the last click is relatively close to first vertex
-            Vector2f vertex0 = V.col(V.cols()-4);
-            Vector2f vertex2 = V.col(V.cols()-1);
-            float dist = (vertex0.coeffRef(0)-vertex2.coeffRef(0))*(vertex0.coeffRef(0)-vertex2.coeffRef(0)) + (vertex0.coeffRef(1)-vertex2.coeffRef(1))*(vertex0.coeffRef(1)-vertex2.coeffRef(1));
-            std::cout << dist << std::endl;
-            if(dist<0.0003)
+            //if it's not the first vertex, resize the matrix to allow one more vertex to be added
+            if(!tri_first)
             {
-                //now glDrawArrays draws triangle instead
-                tri_complete=true;
+                V.conservativeResize(NoChange ,V.cols()+1);
+            }
+            else
+            {
+                //if it is the first vertex, no resizing is necessary, but should be recorded to allow for resizing in the future clicks
+                tri_first = false;
+            }
+
+            //add vertex
+            V.col(V.cols()-1) << xworld, yworld;
+            
+            //if V's number of columns is less than 3
+            if(V.cols()%4==0)
+            {
+                //check if the last click is relatively close to first vertex
+                Vector2f vertex0 = V.col(V.cols()-4);
+                Vector2f vertex2 = V.col(V.cols()-1);
+                float dist = (vertex0.coeffRef(0)-vertex2.coeffRef(0))*(vertex0.coeffRef(0)-vertex2.coeffRef(0)) + (vertex0.coeffRef(1)-vertex2.coeffRef(1))*(vertex0.coeffRef(1)-vertex2.coeffRef(1));
+                std::cout << dist << std::endl;
+                if(dist<0.0003)
+                {
+                    //now glDrawArrays draws triangle instead
+                    tri_complete=true;
+                }
+                    
             }
                 
         }
-            
-    }
 
-    // Upload the change to the GPU
-    VBO.update(V);
+        // Upload the change to the GPU
+        VBO.update(V);
+    }
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -94,14 +98,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     // Update the position of the first vertex if the keys 1,2, or 3 are pressed
     switch (key)
     {
-        case  GLFW_KEY_1:
-            V.col(0) << -0.5,  0.5;
-            break;
-        case GLFW_KEY_2:
-            V.col(0) << 0,  0.5;
-            break;
-        case  GLFW_KEY_3:
-            V.col(0) << 0.5,  0.5;
+        case  GLFW_KEY_I:
+            tri_insert_mode = true;
             break;
         default:
             break;

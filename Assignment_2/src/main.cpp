@@ -153,6 +153,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     {
         case  GLFW_KEY_I:
             tri_insert_mode = true;
+            std::cout << "Triangle Insert Mode" << std::endl;
             break;
         default:
             break;

@@ -30,8 +30,8 @@ VertexBufferObject tri_VBO;
 Eigen::MatrixXf line_V(2,1);
 Eigen::MatrixXf tri_V(2,1);
 
-bool tri_first = true;
-bool tri_complete = false;
+// bool tri_first = true;
+// bool tri_complete = false;
 bool tri_insert_mode = false;
 int click_count = 0;
 int num_triangles = 0;
@@ -63,6 +63,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             line_V.col(click_count) << xworld, yworld;
 
             //update VBO
+            //std::cout << line_V << std::endl;
             line_VBO.update(line_V);
         }
 
@@ -103,54 +104,59 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             //at every click expand the line matrix by one column
             line_V.conservativeResize(NoChange ,line_V.cols()+1);
 
-            //if it's the first click set first column of line matrix to click position
-            if(click_count==0)
+            switch (click_count)
             {
-                line_V.col(click_count) << xworld, yworld;
-                click_count++;
+                case  0:
+                    //if it's the first click set first column of line matrix to click position
+                    std::cout << "First click!" << std::endl;
+                    // line_V.col(click_count) << xworld, yworld;
+                    line_V.coeffRef(0,click_count) = xworld;
+                    line_V.coeffRef(1,click_count) = yworld;
+                    click_count = click_count+1;
+                    std::cout << click_count << std::endl;
+                    std::cout << "--" << std::endl;
+                    std::cout << line_V << std::endl;
+                    std::cout << "--" << std::endl;
+                    break;
+                case 1:
+                    //on the second click, add click position to line matrix
+                    //then draw a line strip using the following line matrix
+                    //first click, second click, wherever the mouse cursor is, and first click
+                    line_V.col(click_count) << xworld, yworld;
+                    
+                    //third vertex in matrix starts as the same as second vertex as a placeholder
+                    line_V.col(line_V.cols()-1) << xworld, yworld;
+
+                    line_V.conservativeResize(NoChange ,line_V.cols()+1);
+
+                    //last vertex of line strip is same as first vertex of line strip (to just preview the triangle not draw one)
+                    line_V.col(line_V.cols()-1) << line_V.col(0);
+                    click_count++;
+                    break;
+                case 2:
+                    //add all three click positions to triangle matrix
+                    int insert_start = tri_V.cols()-1;
+                    tri_V.conservativeResize(NoChange ,line_V.cols()+3);
+                    for(unsigned i=0; i<3; i++)
+                    {
+                        tri_V.col(insert_start+i) << line_V.col(i);
+                    }
+
+                    //update triangle VBO
+                    tri_VBO.update(tri_V);
+                    //increment triangle count
+                    num_triangles++;
+
+                    //clear line matrix
+                    line_V = Eigen::MatrixXf::Zero(2,1),
+                    //reset click count
+                    click_count=0;
+                    break;
             }
+            
 
-            //on the second click, add click position to line matrix
-            if(click_count==1)
-            {
-                //then draw a line strip using the following line matrix
-                //first click, second click, wherever the mouse cursor is, and first click
-                line_V.col(click_count) << xworld, yworld;
-                
-                //third vertex in matrix starts as the same as second vertex as a placeholder
-                line_V.col(line_V.cols()-1) << xworld, yworld;
 
-                line_V.conservativeResize(NoChange ,line_V.cols()+1);
-
-                //last vertex of line strip is same as first vertex of line strip (to just preview the triangle not draw one)
-                line_V.col(line_V.cols()-1) << line_V.col(0);
-                click_count++;
-            }
-
-            //on third click
-            if(click_count==2)
-            {
-                //add all three click positions to triangle matrix
-                int insert_start = tri_V.cols()-1;
-                tri_V.conservativeResize(NoChange ,line_V.cols()+3);
-                for(unsigned i=0; i<3; i++)
-                {
-                    tri_V.col(insert_start+i) << line_V.col(i);
-                }
-
-                //update triangle VBO
-                tri_VBO.update(tri_V);
-                //increment triangle count
-                num_triangles++;
-
-                //clear line matrix
-                line_V = Eigen::MatrixXf::Zero(2,1),
-                //reset click count
-                click_count=0;
-            }
-
-            // //update line VBO
-            // line_VBO.update(line_V);
+            
 
             // //add vertex
             // line_V.col(line_V.cols()-1) << xworld, yworld;
@@ -172,7 +178,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             // }
                 
         }
-
+                    //update line VBO
+            std::cout << click_count << std::endl;
+            std::cout << "--" << std::endl;
+            std::cout << line_V << std::endl;
+            std::cout << "--" << std::endl;
         // Upload the change to the GPU
         line_VBO.update(line_V);
         //tri_VBO.update(tri_V);
@@ -256,9 +266,9 @@ int main(void)
     line_VAO.init();
     line_VAO.bind();
 
-    VertexArrayObject tri_VAO;
-    tri_VAO.init();
-    tri_VAO.bind();
+    // VertexArrayObject tri_VAO;
+    // tri_VAO.init();
+    // tri_VAO.bind();
 
     // Initialize the VBO with the vertices data
     // A VBO is a data container that lives in the GPU memory
@@ -299,7 +309,7 @@ int main(void)
     // The vertex shader wants the position of the vertices as an input.
     // The following line connects the VBO we defined above with the position "slot"
     // in the vertex shader
-    program.bindVertexAttribArray("position",line_VBO);
+    //program.bindVertexAttribArray("position",line_VBO);
 
     // Save the current time --- it will be used to dynamically change the triangle color
     auto t_start = std::chrono::high_resolution_clock::now();
@@ -319,6 +329,7 @@ int main(void)
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
+        line_VAO.bind();
 
         // Bind your program
         program.bind();
@@ -337,21 +348,23 @@ int main(void)
         if(num_triangles>0)
         {
             //bind triangle VAO
-            tri_VAO.bind();
-
+            //tri_VAO.bind();
+            program.bindVertexAttribArray("position",tri_VBO);
             //draw triangles
             glDrawArrays(GL_TRIANGLES, 0, 3*num_triangles);
-            tri_VAO.free();
+            //tri_VAO.free();
         }
 
         
         //if a line is being drawn
         if(tri_insert_mode)
         {
-            //bind line VAO
-            line_VAO.bind();
-            glDrawArrays(GL_LINE_STRIP,0,line_V.cols());
-            line_VAO.free();
+            if(click_count>0)
+            {
+                //bind line VAO
+                program.bindVertexAttribArray("position",line_VBO);
+                glDrawArrays(GL_LINE_STRIP,0,line_V.cols());
+            }
         }
 
         // Swap front and back buffers
@@ -363,7 +376,7 @@ int main(void)
 
     // Deallocate opengl memory
     program.free();
-    line_VAO.free();
+
     line_VBO.free();
     tri_VBO.free();
 

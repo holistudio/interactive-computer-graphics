@@ -34,7 +34,7 @@ bool tri_first = true;
 bool tri_complete = false;
 bool tri_insert_mode = false;
 int click_count = 0;
-//int num_triangles = 0;
+int num_triangles = 0;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -47,17 +47,25 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     //measured in screen coordinates but relative to the top-left corner of the window content area.
     if(tri_insert_mode == true)
     {
-        // Get the size of the window
-        int width, height;
-        glfwGetWindowSize(window, &width, &height);
+        //after the first click, draw a segment from first click to wherever the mouse cursor is
+        //(continuously set the last column of the line matrix to mouse cursor position)
+        if(click_count>0)
+        {
+            // Get the size of the window
+            int width, height;
+            glfwGetWindowSize(window, &width, &height);
 
-        // Convert screen position to world coordinates
-        double xworld = ((xpos/double(width))*2)-1;
-        double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
+            // Convert screen position to world coordinates
+            double xworld = ((xpos/double(width))*2)-1;
+            double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
 
-        //add cursor position to line matrix bound to buffer object
-        line_V.col(line_V.cols()-1) << xworld, yworld;
-        line_VBO.update(line_V);
+            //set line matrix column to mouse cursor position
+            line_V.col(click_count) << xworld, yworld;
+
+            //update VBO
+            line_VBO.update(line_V);
+        }
+
     }
 }
 
@@ -81,53 +89,87 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
         {
             
-            //if it's not the first vertex, resize the matrix to allow one more vertex to be added
-            if(click_count>0)
-            {
-                line_V.conservativeResize(NoChange ,line_V.cols()+1);
-            }
-            else
-            {
-                //if it is the first vertex, no resizing is necessary, but should be recorded to allow for resizing in the future clicks
-                tri_first = false;
-            }
+            // //if it's not the first vertex, resize the matrix to allow one more vertex to be added
+            // if(click_count>0)
+            // {
+            //     line_V.conservativeResize(NoChange ,line_V.cols()+1);
+            // }
+            // else
+            // {
+            //     //if it is the first vertex, no resizing is necessary, but should be recorded to allow for resizing in the future clicks
+            //     tri_first = false;
+            // }
+
             //at every click expand the line matrix by one column
+            line_V.conservativeResize(NoChange ,line_V.cols()+1);
 
             //if it's the first click set first column of line matrix to click position
-
-            //then draw a segment from first click to wherever the mouse cursor is
-            //(continuously set the last column of the line matrix to mouse cursor position)
+            if(click_count==0)
+            {
+                line_V.col(click_count) << xworld, yworld;
+                click_count++;
+            }
 
             //on the second click, add click position to line matrix
+            if(click_count==1)
+            {
+                //then draw a line strip using the following line matrix
+                //first click, second click, wherever the mouse cursor is, and first click
+                line_V.col(click_count) << xworld, yworld;
+                
+                //third vertex in matrix starts as the same as second vertex as a placeholder
+                line_V.col(line_V.cols()-1) << xworld, yworld;
 
-            //then draw a line strip using the following line matrix
-            //first click, second click, wherever the mouse cursor is, and first click
-            //(continuously set the second to last column of the line matrix to mouse cursor position)
+                line_V.conservativeResize(NoChange ,line_V.cols()+1);
+
+                //last vertex of line strip is same as first vertex of line strip (to just preview the triangle not draw one)
+                line_V.col(line_V.cols()-1) << line_V.col(0);
+                click_count++;
+            }
 
             //on third click
-            //add all three click positions to triangle matrix
-            //update triangle VBO
-            //clear line matrix
-            //update line VBO
-
-            //add vertex
-            line_V.col(line_V.cols()-1) << xworld, yworld;
-            
-            //if V's number of columns is less than 3
-            if(line_V.cols()%4==0)
+            if(click_count==2)
             {
-                //check if the last click is relatively close to first vertex
-                Vector2f vertex0 = line_V.col(line_V.cols()-4);
-                Vector2f vertex2 = line_V.col(line_V.cols()-1);
-                float dist = (vertex0.coeffRef(0)-vertex2.coeffRef(0))*(vertex0.coeffRef(0)-vertex2.coeffRef(0)) 
-                + (vertex0.coeffRef(1)-vertex2.coeffRef(1))*(vertex0.coeffRef(1)-vertex2.coeffRef(1));
-                if(dist<0.0003)
+                //add all three click positions to triangle matrix
+                int insert_start = tri_V.cols()-1;
+                tri_V.conservativeResize(NoChange ,line_V.cols()+3);
+                for(unsigned i=0; i<3; i++)
                 {
-                    //now glDrawArrays draws triangle instead
-                    tri_complete=true;
+                    tri_V.col(insert_start+i) << line_V.col(i);
                 }
-                    
+
+                //update triangle VBO
+                tri_VBO.update(tri_V);
+                //increment triangle count
+                num_triangles++;
+
+                //clear line matrix
+                line_V = Eigen::MatrixXf::Zero(2,1),
+                //reset click count
+                click_count=0;
             }
+
+            // //update line VBO
+            // line_VBO.update(line_V);
+
+            // //add vertex
+            // line_V.col(line_V.cols()-1) << xworld, yworld;
+            
+            // //if V's number of columns is less than 3
+            // if(line_V.cols()%4==0)
+            // {
+            //     //check if the last click is relatively close to first vertex
+            //     Vector2f vertex0 = line_V.col(line_V.cols()-4);
+            //     Vector2f vertex2 = line_V.col(line_V.cols()-1);
+            //     float dist = (vertex0.coeffRef(0)-vertex2.coeffRef(0))*(vertex0.coeffRef(0)-vertex2.coeffRef(0)) 
+            //     + (vertex0.coeffRef(1)-vertex2.coeffRef(1))*(vertex0.coeffRef(1)-vertex2.coeffRef(1));
+            //     if(dist<0.0003)
+            //     {
+            //         //now glDrawArrays draws triangle instead
+            //         tri_complete=true;
+            //     }
+                    
+            // }
                 
         }
 
@@ -277,9 +319,6 @@ int main(void)
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
-        // Bind your VAO (not necessary if you have only one)
-        line_VAO.bind();
-        tri_VAO.bind();
 
         // Bind your program
         program.bind();
@@ -295,36 +334,25 @@ int main(void)
 
 
         // Draw all complete triangles
+        if(num_triangles>0)
+        {
             //bind triangle VAO
-            //glBindVertexArray(tri_VAO);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
-            //glDrawArrays(GL_TRIANGLES, 0, 3*num_triangles);
-            //glBindVertexArray(0);
+            tri_VAO.bind();
+
+            //draw triangles
+            glDrawArrays(GL_TRIANGLES, 0, 3*num_triangles);
+            tri_VAO.free();
+        }
+
         
         //if a line is being drawn
-            //bind line VAO
-            //glBindVertexArray(tri_VAO);
-            glDrawArrays(GL_LINE_STRIP,0,line_V.cols());
-            //glBindVertexArray(0);
-
-        //if num_triangles > 0
-        if(tri_complete)
-        {
-            //bind triangle VAO
-            //glBindVertexArray(tri_VAO);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
-            //glDrawArrays(GL_TRIANGLES, 0, 3*num_triangles);
-            //glBindVertexArray(0);
-        }
-        else //remove else, this is done always or at least after first click
+        if(tri_insert_mode)
         {
             //bind line VAO
-            //glBindVertexArray(tri_VAO);
+            line_VAO.bind();
             glDrawArrays(GL_LINE_STRIP,0,line_V.cols());
-            //glBindVertexArray(0);
+            line_VAO.free();
         }
-        
-        
 
         // Swap front and back buffers
         glfwSwapBuffers(window);

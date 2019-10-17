@@ -33,6 +33,7 @@ Eigen::MatrixXf tri_V(2,1);
 // bool tri_first = true;
 // bool tri_complete = false;
 bool tri_insert_mode = false;
+bool tri_move_mode = false;
 int click_count = 0;
 int num_triangles = 0;
 bool mouse_move = false;
@@ -46,7 +47,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
     //The callback functions receives the cursor position
     //measured in screen coordinates but relative to the top-left corner of the window content area.
-    if(tri_insert_mode == true)
+    if(tri_insert_mode)
     {
         //after the first click, draw a segment from first click to wherever the mouse cursor is
         //(continuously set the last column of the line matrix to mouse cursor position)
@@ -75,22 +76,22 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-    if(tri_insert_mode == true)
+    // Get the position of the mouse in the window
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+
+    // Get the size of the window
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    // Convert screen position to world coordinates
+    double xworld = ((xpos/double(width))*2)-1;
+    double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
+
+    // Add mouse click coordinates to V if the left button is pressed
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
-        // Get the position of the mouse in the window
-        double xpos, ypos;
-        glfwGetCursorPos(window, &xpos, &ypos);
-
-        // Get the size of the window
-        int width, height;
-        glfwGetWindowSize(window, &width, &height);
-
-        // Convert screen position to world coordinates
-        double xworld = ((xpos/double(width))*2)-1;
-        double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
-
-        // Add mouse click coordinates to V if the left button is pressed
-        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+        if(tri_insert_mode)
         {
             //at every click expand the line matrix by one column
             line_V.conservativeResize(NoChange ,line_V.cols()+1);
@@ -138,12 +139,17 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     //reset click count
                     click_count=0;
                     break;
-            }   
+            }
         }
-        //update line VBO
-        // Upload the change to the GPU
-        line_VBO.update(line_V);
+
+        if(tri_move_mode)
+        {
+            std::cout <<"Move!"<<std::endl;
+        }  
     }
+    //update line VBO
+    // Upload the change to the GPU
+    line_VBO.update(line_V);
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -153,7 +159,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     {
         case  GLFW_KEY_I:
             tri_insert_mode = true;
+            tri_move_mode = false;
             std::cout << "Triangle Insert Mode" << std::endl;
+            break;
+        case  GLFW_KEY_O:
+            tri_insert_mode = false;
+            tri_move_mode = true;
+            std::cout << "Triangle Move Mode" << std::endl;
             break;
         default:
             break;

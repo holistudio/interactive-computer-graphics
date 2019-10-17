@@ -64,8 +64,9 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             line_V.col(click_count) << xworld, yworld;
 
             //update VBO
-            //std::cout << line_V << std::endl;
             line_VBO.update(line_V);
+
+            //mouse is now moving, and the line can now be rendered
             mouse_move = true;
         }
 
@@ -91,18 +92,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         // Add mouse click coordinates to V if the left button is pressed
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
         {
-            
-            // //if it's not the first vertex, resize the matrix to allow one more vertex to be added
-            // if(click_count>0)
-            // {
-            //     line_V.conservativeResize(NoChange ,line_V.cols()+1);
-            // }
-            // else
-            // {
-            //     //if it is the first vertex, no resizing is necessary, but should be recorded to allow for resizing in the future clicks
-            //     tri_first = false;
-            // }
-
             //at every click expand the line matrix by one column
             line_V.conservativeResize(NoChange ,line_V.cols()+1);
 
@@ -110,16 +99,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             {
                 case  0:
                     //if it's the first click set first column of line matrix to click position
-                    std::cout << "First click!" << std::endl;
                     line_V.col(click_count) << xworld, yworld;
-                    // line_V.coeffRef(0,click_count) = xworld;
-                    // line_V.coeffRef(1,click_count) = yworld;
                     click_count = click_count+1;
                     mouse_move=false;
-                    std::cout << click_count << std::endl;
-                    std::cout << "--" << std::endl;
-                    std::cout << line_V << std::endl;
-                    std::cout << "--" << std::endl;
                     break;
                 case 1:
                     //on the second click, add click position to line matrix
@@ -156,40 +138,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     //reset click count
                     click_count=0;
                     break;
-            }
-            
-
-
-            
-
-            // //add vertex
-            // line_V.col(line_V.cols()-1) << xworld, yworld;
-            
-            // //if V's number of columns is less than 3
-            // if(line_V.cols()%4==0)
-            // {
-            //     //check if the last click is relatively close to first vertex
-            //     Vector2f vertex0 = line_V.col(line_V.cols()-4);
-            //     Vector2f vertex2 = line_V.col(line_V.cols()-1);
-            //     float dist = (vertex0.coeffRef(0)-vertex2.coeffRef(0))*(vertex0.coeffRef(0)-vertex2.coeffRef(0)) 
-            //     + (vertex0.coeffRef(1)-vertex2.coeffRef(1))*(vertex0.coeffRef(1)-vertex2.coeffRef(1));
-            //     if(dist<0.0003)
-            //     {
-            //         //now glDrawArrays draws triangle instead
-            //         tri_complete=true;
-            //     }
-                    
-            // }
-                
+            }   
         }
-                    //update line VBO
-            std::cout << click_count << std::endl;
-            std::cout << "--" << std::endl;
-            std::cout << line_V << std::endl;
-            std::cout << "--" << std::endl;
+        //update line VBO
         // Upload the change to the GPU
         line_VBO.update(line_V);
-        //tri_VBO.update(tri_V);
     }
 }
 

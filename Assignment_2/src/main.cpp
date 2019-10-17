@@ -35,6 +35,7 @@ Eigen::MatrixXf tri_V(2,1);
 bool tri_insert_mode = false;
 int click_count = 0;
 int num_triangles = 0;
+bool mouse_move = false;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -65,6 +66,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             //update VBO
             //std::cout << line_V << std::endl;
             line_VBO.update(line_V);
+            mouse_move = true;
         }
 
     }
@@ -113,6 +115,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     // line_V.coeffRef(0,click_count) = xworld;
                     // line_V.coeffRef(1,click_count) = yworld;
                     click_count = click_count+1;
+                    mouse_move=false;
                     std::cout << click_count << std::endl;
                     std::cout << "--" << std::endl;
                     std::cout << line_V << std::endl;
@@ -360,12 +363,19 @@ int main(void)
         //if a line is being drawn
         if(tri_insert_mode)
         {
+            program.bindVertexAttribArray("position",line_VBO);
             if(click_count>0)
             {
-                //bind line VAO
-                program.bindVertexAttribArray("position",line_VBO);
-                glDrawArrays(GL_LINE_STRIP,0,line_V.cols());
+                if(mouse_move)
+                {
+                    glDrawArrays(GL_LINE_STRIP,0,line_V.cols());
+                }
+                else
+                {
+                    glDrawArrays(GL_LINE_STRIP,0,line_V.cols()-1);
+                }   
             }
+            
         }
 
         // Swap front and back buffers

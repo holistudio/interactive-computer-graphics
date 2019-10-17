@@ -109,9 +109,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 case  0:
                     //if it's the first click set first column of line matrix to click position
                     std::cout << "First click!" << std::endl;
-                    // line_V.col(click_count) << xworld, yworld;
-                    line_V.coeffRef(0,click_count) = xworld;
-                    line_V.coeffRef(1,click_count) = yworld;
+                    line_V.col(click_count) << xworld, yworld;
+                    // line_V.coeffRef(0,click_count) = xworld;
+                    // line_V.coeffRef(1,click_count) = yworld;
                     click_count = click_count+1;
                     std::cout << click_count << std::endl;
                     std::cout << "--" << std::endl;
@@ -136,7 +136,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 case 2:
                     //add all three click positions to triangle matrix
                     int insert_start = tri_V.cols()-1;
-                    tri_V.conservativeResize(NoChange ,line_V.cols()+3);
+                    tri_V.conservativeResize(NoChange ,tri_V.cols()+3);
                     for(unsigned i=0; i<3; i++)
                     {
                         tri_V.col(insert_start+i) << line_V.col(i);
@@ -144,6 +144,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
                     //update triangle VBO
                     tri_VBO.update(tri_V);
+
                     //increment triangle count
                     num_triangles++;
 

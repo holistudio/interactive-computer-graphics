@@ -16,6 +16,7 @@
 // Linear Algebra Library
 #include <Eigen/Core>
 using namespace Eigen;
+using namespace std;
 
 // Timer
 #include <chrono>
@@ -34,9 +35,13 @@ Eigen::MatrixXf tri_V(2,1);
 // bool tri_complete = false;
 bool tri_insert_mode = false;
 bool tri_move_mode = false;
+bool tri_clicked = false;
 int click_count = 0;
 int num_triangles = 0;
 bool mouse_move = false;
+
+vector<double> start_click;
+vector<double> mouse_pos;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -71,6 +76,17 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             mouse_move = true;
         }
 
+    }
+    if(tri_move_mode)
+    {
+        if(tri_clicked)
+        {
+            //set current mouse position to vector mouse_pos
+            //calculated difference btw start_click and mouse_pos
+            //translate all vertices of the clicked triangle
+            //update triangle VBO
+        }
+        
     }
 }
 
@@ -144,7 +160,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
         if(tri_move_mode)
         {
-            std::cout <<"Move!"<<std::endl;
+            //check if click coordinates is in any triangles
+            //if click is in a triangle
+            //update fragment shader for the vertices of the clicked triangle
         }  
     }
     //update line VBO

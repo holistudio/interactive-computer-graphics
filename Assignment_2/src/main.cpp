@@ -43,6 +43,29 @@ bool mouse_move = false;
 vector<double> start_click;
 vector<double> mouse_pos;
 
+class color
+{
+    public:
+        float r;
+        float g;
+        float b;
+};
+class point
+{
+    public:
+        float x;
+        float y;
+};
+class triangle
+{
+    public:
+        vector<point> vertices;
+        point center;
+        color rgb;
+};
+
+vector<triangle> triangles;
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);

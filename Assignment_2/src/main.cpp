@@ -229,7 +229,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             {
                 if(click_triangle(click_point,triangles[i]).clicked)
                 {
-                    cout << "Triangle Click!" << endl;
+                    triangles[i].clicked = true;
                 }
             }
             //if click is in a triangle
@@ -410,13 +410,22 @@ int main(void)
         // Draw all complete triangles
         if(num_triangles>0)
         {
-            glUniform3f(program.uniform("triangleColor"), 1.0f, 0.0f, 0.0f);
-            //bind triangle VAO
-            //tri_VAO.bind();
             program.bindVertexAttribArray("position",tri_VBO);
-            //draw triangles
-            glDrawArrays(GL_TRIANGLES, 0, 3*num_triangles);
-            //tri_VAO.free();
+            for(unsigned i=0; i<triangles.size(); i++)
+            {
+                if(triangles[i].clicked)
+                {
+                    glUniform3f(program.uniform("triangleColor"), 0.0f, 0.0f, 1.0f);
+                }
+                else
+                {
+                    glUniform3f(program.uniform("triangleColor"), 1.0f, 0.0f, 0.0f);
+                }
+                
+                //draw triangles
+                glDrawArrays(GL_TRIANGLES, i*3, 3);
+            }
+
         }
 
         

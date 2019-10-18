@@ -323,9 +323,7 @@ int main(void)
         program.bind();
 
         // Set the uniform value depending on the time difference
-        auto t_now = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
-        // glUniform3f(program.uniform("triangleColor"), (float)(sin(time * 4.0f) + 1.0f) / 2.0f, 0.0f, 0.0f);
+        
 
         // Clear the framebuffer
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -335,6 +333,7 @@ int main(void)
         // Draw all complete triangles
         if(num_triangles>0)
         {
+            glUniform3f(program.uniform("triangleColor"), 1.0f, 0.0f, 0.0f);
             //bind triangle VAO
             //tri_VAO.bind();
             program.bindVertexAttribArray("position",tri_VBO);
@@ -350,6 +349,7 @@ int main(void)
             program.bindVertexAttribArray("position",line_VBO);
             if(click_count>0)
             {
+                glUniform3f(program.uniform("triangleColor"), 0.0f, 0.0f, 0.0f);
                 if(mouse_move)
                 {
                     glDrawArrays(GL_LINE_STRIP,0,line_V.cols());

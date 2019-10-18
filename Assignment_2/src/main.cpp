@@ -35,13 +35,12 @@ Eigen::MatrixXf tri_V(2,1);
 // bool tri_complete = false;
 bool tri_insert_mode = false;
 bool tri_move_mode = false;
-bool tri_clicked = false;
+
 int click_count = 0;
 int num_triangles = 0;
 bool mouse_move = false;
 
-vector<double> start_click;
-vector<double> mouse_pos;
+Vector2d start_click;
 
 class color
 {
@@ -65,6 +64,8 @@ class triangle
         bool clicked = false;
 };
 
+bool tri_clicked = false;
+int clicked_index = 0;
 vector<triangle> triangles;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
@@ -132,7 +133,12 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
         if(tri_clicked)
         {
             //set current mouse position to vector mouse_pos
+            Vector2d mouse_pos;
+            mouse_pos << xpos, ypos;
+
             //calculated difference btw start_click and mouse_pos
+            Vector2d tr = mouse_pos - start_click;
+
             //translate all vertices of the clicked triangle
             //update triangle VBO
         }
@@ -229,7 +235,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             {
                 if(click_triangle(click_point,triangles[i]).clicked)
                 {
-                    triangles[i].clicked = true;
+                    // triangles[i].clicked = true;
+                    tri_clicked = true;
+                    clicked_index = i;
+                    cout << i << endl;
                 }
             }
             //if click is in a triangle
@@ -413,7 +422,7 @@ int main(void)
             program.bindVertexAttribArray("position",tri_VBO);
             for(unsigned i=0; i<triangles.size(); i++)
             {
-                if(triangles[i].clicked)
+                if(tri_clicked && i == clicked_index)
                 {
                     glUniform3f(program.uniform("triangleColor"), 0.0f, 0.0f, 1.0f);
                 }

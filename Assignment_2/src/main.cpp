@@ -62,6 +62,7 @@ class triangle
         point center;
         color rgb;
         bool clicked = false;
+        vector<point> clicked_v;
 };
 
 bool tri_clicked = false;
@@ -101,6 +102,14 @@ triangle click_triangle(point click_point, triangle test_triangle)
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    // Get the size of the window
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    // Convert screen position to world coordinates
+    double xworld = ((xpos/double(width))*2)-1;
+    double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
+
     //The callback functions receives the cursor position
     //measured in screen coordinates but relative to the top-left corner of the window content area.
     if(tri_insert_mode)
@@ -109,13 +118,6 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
         //(continuously set the last column of the line matrix to mouse cursor position)
         if(click_count>0)
         {
-            // Get the size of the window
-            int width, height;
-            glfwGetWindowSize(window, &width, &height);
-
-            // Convert screen position to world coordinates
-            double xworld = ((xpos/double(width))*2)-1;
-            double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
 
             //set line matrix column to mouse cursor position
             line_V.col(click_count) << xworld, yworld;
@@ -134,13 +136,22 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
         {
             //set current mouse position to vector mouse_pos
             Vector2d mouse_pos;
-            mouse_pos << xpos, ypos;
-
+            mouse_pos << xworld, yworld;
+            
             //calculated difference btw start_click and mouse_pos
             Vector2d tr = mouse_pos - start_click;
-
+            cout << tr.transpose() << endl;
             //translate all vertices of the clicked triangle
+            for(unsigned i = 0; i < triangles[clicked_index].v.size(); i++)
+            {
+                triangles[clicked_index].v[i].x = triangles[clicked_index].clicked_v[i].x + tr.coeffRef(0);
+                triangles[clicked_index].v[i].y = triangles[clicked_index].clicked_v[i].y + tr.coeffRef(1);
+
+                tri_V.col(clicked_index*3+i) << triangles[clicked_index].v[i].x , triangles[clicked_index].v[i].y;
+            }
+
             //update triangle VBO
+            tri_VBO.update(tri_V);
         }
         
     }
@@ -238,7 +249,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     // triangles[i].clicked = true;
                     tri_clicked = true;
                     clicked_index = i;
-                    cout << i << endl;
+                    start_click << click_point.x, click_point.y;
+                    triangles[i].clicked_v = triangles[i].v;
                 }
             }
             //if click is in a triangle

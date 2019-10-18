@@ -74,7 +74,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-triangle click_triangle(point click_point, triangle test_triangle)
+bool click_triangle(point click_point, triangle test_triangle)
 {
     point a = test_triangle.v[0];
     point b = test_triangle.v[1];
@@ -93,11 +93,10 @@ triangle click_triangle(point click_point, triangle test_triangle)
         float beta = (ya_minus_yc*click_point.x + xc_minus_xa*click_point.y + xayc_minus_xcya) / (ya_minus_yc*b.x + xc_minus_xa*b.y + xayc_minus_xcya);
         if(beta < 1 && beta >=0)
         {
-            test_triangle.clicked = true;
-            float alpha = 1 - beta - gamma;
+            return true;
         }
     }
-    return test_triangle;
+    return false;
 }
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
@@ -244,18 +243,26 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
             for(unsigned i=0; i<triangles.size(); i++)
             {
-                if(click_triangle(click_point,triangles[i]).clicked)
+                if(click_triangle(click_point,triangles[i]))
                 {
-                    // triangles[i].clicked = true;
                     tri_clicked = true;
                     clicked_index = i;
                     start_click << click_point.x, click_point.y;
                     triangles[i].clicked_v = triangles[i].v;
                 }
             }
-            //if click is in a triangle
-            //update fragment shader for the vertices of the clicked triangle
         }  
+    }
+    else
+    {
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+        {
+            if(tri_move_mode)
+            {
+                tri_clicked = false;
+                clicked_index = 0;
+            } 
+        }
     }
     //update line VBO
     // Upload the change to the GPU

@@ -105,7 +105,7 @@ bool click_triangle(point click_point, triangle test_triangle)
     return false;
 }
 
-void removeColumn(Eigen::MatrixXf& matrix, unsigned int colToRemove)
+void removeColumn(MatrixXf& matrix, unsigned int colToRemove)
 {
     //Eigen matrix column remover function courtesy of https://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
     //Thank the gods for StackOverflow
@@ -250,6 +250,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     click_count=0;
                     break;
             }
+            //update line VBO
+            line_VBO.update(line_V);
         }
 
         if(tri_move_mode)
@@ -303,9 +305,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             } 
         }
     }
-    //update line VBO
-    // Upload the change to the GPU
-    line_VBO.update(line_V);
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)

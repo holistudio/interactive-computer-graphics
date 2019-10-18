@@ -59,9 +59,10 @@ class point
 class triangle
 {
     public:
-        vector<point> vertices;
+        vector<point> v; //vector of vertices
         point center;
         color rgb;
+        bool clicked = false;
 };
 
 vector<triangle> triangles;
@@ -69,6 +70,32 @@ vector<triangle> triangles;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
+}
+
+triangle click_triangle(point click_point, triangle test_triangle)
+{
+    point a = test_triangle.v[0];
+    point b = test_triangle.v[1];
+    point c = test_triangle.v[2];
+    float ya_minus_yb = a.y - b.y;
+    float xb_minus_xa = b.x - a.x;
+    float xayb_minus_xbya = a.x*b.y - b.x*a.y;
+    float ya_minus_yc = a.y - c.y;
+    float xc_minus_xa = c.x - a.x;
+    float xayc_minus_xcya = a.x*c.y - c.x*a.y;
+
+    float gamma = (ya_minus_yb*click_point.x + xb_minus_xa*click_point.y + xayb_minus_xbya) / (ya_minus_yb*c.x + xb_minus_xa*c.y + xayb_minus_xbya);
+    
+    if(gamma < 1 && gamma >=0)
+    {
+        float beta = (ya_minus_yc*click_point.x + xc_minus_xa*click_point.y + xayc_minus_xcya) / (ya_minus_yc*b.x + xc_minus_xa*b.y + xayc_minus_xcya);
+        if(beta < 1 && beta >=0)
+        {
+            test_triangle.clicked = true;
+            float alpha = 1 - beta - gamma;
+        }
+    }
+    return test_triangle;
 }
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)

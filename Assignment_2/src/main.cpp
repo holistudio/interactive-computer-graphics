@@ -35,6 +35,7 @@ Eigen::MatrixXf tri_V(2,1);
 // bool tri_complete = false;
 bool tri_insert_mode = false;
 bool tri_move_mode = false;
+bool tri_delete_mode = false;
 
 int click_count = 0;
 int num_triangles = 0;
@@ -99,6 +100,19 @@ bool click_triangle(point click_point, triangle test_triangle)
     return false;
 }
 
+void removeColumn(Eigen::MatrixXf& matrix, unsigned int colToRemove)
+{
+    //Eigen matrix column remover function courtesy of https://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
+    //Thank the gods for StackOverflow
+    unsigned int numRows = matrix.rows();
+    unsigned int numCols = matrix.cols()-1;
+
+    if( colToRemove < numCols )
+        matrix.block(0,colToRemove,numRows,numCols-colToRemove) = matrix.block(0,colToRemove+1,numRows,numCols-colToRemove);
+
+    matrix.conservativeResize(numRows,numCols);
+}
+
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
     // Get the size of the window
@@ -139,7 +153,6 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             
             //calculated difference btw start_click and mouse_pos
             Vector2d tr = mouse_pos - start_click;
-            cout << tr.transpose() << endl;
             //translate all vertices of the clicked triangle
             for(unsigned i = 0; i < triangles[clicked_index].v.size(); i++)
             {
@@ -251,7 +264,28 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     triangles[i].clicked_v = triangles[i].v;
                 }
             }
-        }  
+        } 
+
+        if(tri_delete_mode) 
+        {
+            //check if click coordinates is in any triangles
+            point click_point;
+            click_point.x = xworld;
+            click_point.y = yworld;
+
+            for(unsigned i=0; i<triangles.size(); i++)
+            {
+                if(click_triangle(click_point,triangles[i]))
+                {
+                    triangles.erase(triangles.begin()+i);
+                    removeColumn(tri_V,i*3);
+                    removeColumn(tri_V,i*3);
+                    removeColumn(tri_V,i*3);
+                    i--;
+                }
+            }
+            tri_VBO.update(tri_V);
+        }
     }
     else
     {
@@ -277,12 +311,20 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         case  GLFW_KEY_I:
             tri_insert_mode = true;
             tri_move_mode = false;
+            tri_delete_mode = false;
             std::cout << "Triangle Insert Mode" << std::endl;
             break;
         case  GLFW_KEY_O:
             tri_insert_mode = false;
             tri_move_mode = true;
+            tri_delete_mode = false;
             std::cout << "Triangle Move Mode" << std::endl;
+            break;
+        case  GLFW_KEY_P:
+            tri_insert_mode = false;
+            tri_move_mode = false;
+            tri_delete_mode = true;
+            std::cout << "Triangle Delete Mode" << std::endl;
             break;
         // case  GLFW_KEY_H:
             // First subtract the coordinates of the centre

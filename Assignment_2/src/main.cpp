@@ -189,10 +189,20 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     //add all three click positions to triangle matrix
                     int insert_start = tri_V.cols()-1;
                     tri_V.conservativeResize(NoChange ,tri_V.cols()+3);
+
+                    triangle new_triangle;
+                    point new_vertex;
+
                     for(unsigned i=0; i<3; i++)
                     {
                         tri_V.col(insert_start+i) << line_V.col(i);
+
+                        new_vertex.x = line_V.col(i).coeffRef(0);
+                        new_vertex.y = line_V.col(i).coeffRef(1);
+                        new_triangle.v.push_back(new_vertex);
                     }
+
+                    triangles.push_back(new_triangle);
 
                     //update triangle VBO
                     tri_VBO.update(tri_V);
@@ -211,6 +221,17 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         if(tri_move_mode)
         {
             //check if click coordinates is in any triangles
+            point click_point;
+            click_point.x = xworld;
+            click_point.y = yworld;
+
+            for(unsigned i=0; i<triangles.size(); i++)
+            {
+                if(click_triangle(click_point,triangles[i]).clicked)
+                {
+                    cout << "Triangle Click!" << endl;
+                }
+            }
             //if click is in a triangle
             //update fragment shader for the vertices of the clicked triangle
         }  

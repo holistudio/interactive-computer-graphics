@@ -208,6 +208,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             tri_move_mode = true;
             std::cout << "Triangle Move Mode" << std::endl;
             break;
+        // case  GLFW_KEY_H:
+            // First subtract the coordinates of the centre
+            // from each vertex coordinate. Then multiply each new vertex by the rotation matrix for clockwise rotation by 30 degrees, i.e.
+            // (cos(−10)sin(−10)−sin(−10)cos(−10))
+            // to obtain three new rotated vertices. Then add back the centre coordinates to each rotated vertex.
+            // break;
         default:
             break;
     }

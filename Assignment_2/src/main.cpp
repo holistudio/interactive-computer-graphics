@@ -94,7 +94,12 @@ bool click_triangle(point click_point, triangle test_triangle)
         float beta = (ya_minus_yc*click_point.x + xc_minus_xa*click_point.y + xayc_minus_xcya) / (ya_minus_yc*b.x + xc_minus_xa*b.y + xayc_minus_xcya);
         if(beta < 1 && beta >=0)
         {
-            return true;
+            float alpha = 1-beta-gamma;
+            if(alpha < 1 && alpha >0)
+            {
+                return true;
+            }
+            
         }
     }
     return false;

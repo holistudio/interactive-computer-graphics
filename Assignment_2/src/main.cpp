@@ -22,6 +22,7 @@ using namespace std;
 #include <chrono>
 
 #include <iostream>
+#include <limits>
 
 // VertexBufferObject wrapper
 VertexBufferObject line_VBO;
@@ -36,6 +37,7 @@ Eigen::MatrixXf tri_V(5,1);
 bool tri_insert_mode = false;
 bool tri_move_mode = false;
 bool tri_delete_mode = false;
+bool v_color_mode = false;
 
 int click_count = 0;
 int num_triangles = 0;
@@ -69,7 +71,7 @@ class triangle
 
 bool tri_clicked = false;
 int clicked_index = 0;
-vector<triangle> triangles;
+vector<triangle> triangles; //TODO: maybe not necessary. only one triangle needs to be stored, the one that selected. 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -245,6 +247,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     // Add mouse click coordinates to V if the left button is pressed
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
+        //TODO: switch on a mode string variable
         if(tri_insert_mode)
         {
             //at every click expand the line matrix by one column
@@ -388,6 +391,36 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             }
             tri_VBO.update(tri_V);
         }
+
+        if(v_color_mode)
+        {
+            float v_dist; 
+            float min_dist = numeric_limits<float>::infinity(); //set to infinity
+            int v_index = 0;
+            //for all vertices in tri_V
+            for(unsigned i=0; i<tri_V.cols()-1; i++)
+            {
+                //calculate distance between mouse click and vertex, v_dist
+                v_dist = (tri_V.col(i).coeff(0) - xworld)*(tri_V.col(i).coeff(0) - xworld) + (tri_V.col(i).coeff(1) - yworld)*(tri_V.col(i).coeff(1) - yworld);
+
+                //if distance is less than min_dist
+                if(v_dist < min_dist)
+                {
+                    //set to v_dist as new min_dist
+                    min_dist = v_dist;
+
+                    //store index of vertex
+                    v_index = i;
+                }
+                
+            }
+
+            //change closest vertex color to blue
+            tri_V.col(v_index).coeffRef(2) = 0.0f;
+            tri_V.col(v_index).coeffRef(3) = 0.0f;
+            tri_V.col(v_index).coeffRef(4) = 1.0f;
+            tri_VBO.update(tri_V);
+        }
     }
     // The follow commented out section of code is meant only for Task 1.1
     // where releasing the left mouse button "releases" the clicked triangle.
@@ -411,12 +444,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     //only perform action on key press, not key release
     if(action == GLFW_PRESS)
     {
+        //TODO: re-organize switch and boolean if statements
         switch (key)
         {
             case  GLFW_KEY_I:
                 tri_insert_mode = true;
                 tri_move_mode = false;
                 tri_delete_mode = false;
+                v_color_mode = false;
                 click_count = 0;
                 std::cout << "Triangle Insert Mode" << std::endl;
                 break;
@@ -424,6 +459,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 tri_insert_mode = false;
                 tri_move_mode = true;
                 tri_delete_mode = false;
+                v_color_mode = false;
                 click_count = 0;
                 std::cout << "Triangle Move Mode" << std::endl;
                 break;
@@ -431,6 +467,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 tri_insert_mode = false;
                 tri_move_mode = false;
                 tri_delete_mode = true;
+                v_color_mode = false;
                 click_count = 0;
                 std::cout << "Triangle Delete Mode" << std::endl;
                 break;
@@ -469,6 +506,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     scale << 0.75, 0, 0, 0.75;
                     transform_triangle(window, triangles[clicked_index], scale);
                 }
+                break;
+            case  GLFW_KEY_C:
+                tri_insert_mode = false;
+                tri_move_mode = false;
+                tri_delete_mode = false;
+                v_color_mode = true;
+                click_count = 0; //TODO: maybe not needed
+                std::cout << "Vertex Color Mode" << std::endl;
                 break;
             default:
                 break;

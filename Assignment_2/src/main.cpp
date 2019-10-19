@@ -314,10 +314,24 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         {
             if(click_count>0)
             {
+                //reset color to red
+                //TODO: revert to original colors before click
+                //Set vertex colors to blue
+                for(unsigned i = 0; i<3; i++)
+                {
+                    triangles[clicked_index].v[i].rgb.r = 1.0f;
+                    triangles[clicked_index].v[i].rgb.g = 0.0f;
+                    triangles[clicked_index].v[i].rgb.b = 0.0f;
+
+                    tri_V.col(clicked_index+i).coeffRef(2) = 1.0f;
+                    tri_V.col(clicked_index+i).coeffRef(3) = 0.0f;
+                    tri_V.col(clicked_index+i).coeffRef(4) = 0.0f;
+                }
+                tri_VBO.update(tri_V);
+
                 tri_clicked = false;
                 clicked_index = 0;
                 click_count = 0;
-                //TODO: set color to original color
             }
             else
             {
@@ -334,10 +348,23 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         clicked_index = i;
                         start_click << click_point.x, click_point.y;
                         triangles[i].clicked_v = triangles[i].v;
+                        
                         click_count++;
-                        //TODO: Set vertex colors to blue
                     }
                 }
+                //Set vertex colors to blue
+                for(unsigned i = 0; i<3; i++)
+                {
+                    triangles[clicked_index].v[i].rgb.r = 0.0f;
+                    triangles[clicked_index].v[i].rgb.g = 0.0f;
+                    triangles[clicked_index].v[i].rgb.b = 1.0f;
+
+                    tri_V.col(clicked_index+i).coeffRef(2) = 0.0f;
+                    tri_V.col(clicked_index+i).coeffRef(3) = 0.0f;
+                    tri_V.col(clicked_index+i).coeffRef(4) = 1.0f;
+                }
+                
+                tri_VBO.update(tri_V);
             }
         } 
 
@@ -613,7 +640,6 @@ int main(void)
         if(tri_insert_mode)
         {
             line_VBO.bind();
-
 
             glEnableVertexAttribArray(0);
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (const GLvoid *)8);

@@ -45,10 +45,25 @@ Vector2d start_click;
 class color
 {
     public:
-        float r = 1.0f;
-        float g = 0.0f;
-        float b = 0.0f;
+
+        float r;
+        float g;
+        float b;
+        color()
+        {
+            r = 1.0;
+            g = 0.0;
+            b = 0.0;
+        }
+        color(float r1, float g1, float b1)
+        {
+            r = r1;
+            g = g1;
+            b = b1;
+        }
+
 };
+
 class point
 {
     public:
@@ -68,7 +83,11 @@ class triangle
 
 bool tri_clicked = false;
 int clicked_index = 0;
+int v_clicked = 0;
 vector<triangle> triangles; //TODO: maybe not necessary. only one triangle needs to be stored, the one that selected. 
+
+vector<color> colors;
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -401,7 +420,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             {
                 float v_dist; 
                 float min_dist = numeric_limits<float>::infinity(); //set to infinity
-                int v_index = 0;
+                
                 //for all vertices in tri_V
                 for(unsigned i=0; i<tri_V.cols()-1; i++)
                 {
@@ -415,15 +434,16 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         min_dist = v_dist;
 
                         //store index of vertex
-                        v_index = i;
+                        v_clicked = i;
                     }
                 }
 
                 //change closest vertex color to blue
-                tri_V.col(v_index).coeffRef(2) = 0.0f;
-                tri_V.col(v_index).coeffRef(3) = 0.0f;
-                tri_V.col(v_index).coeffRef(4) = 1.0f;
+                tri_V.col(v_clicked).coeffRef(2) = 0.0f;
+                tri_V.col(v_clicked).coeffRef(3) = 0.0f;
+                tri_V.col(v_clicked).coeffRef(4) = 1.0f;
                 tri_VBO.update(tri_V);
+                click_count++;
                 break;
             }
             default:
@@ -472,7 +492,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
             case  GLFW_KEY_C:
                 mode = 'c';
-                //click_count = 0; //TODO: maybe not needed
+                click_count = 0; 
                 std::cout << "Vertex Color Mode" << std::endl;
                 break;
             default:
@@ -518,11 +538,66 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     break;
             }
         }
+        if(mode=='c')
+        {
+            if(click_count>0)
+            {
+                int color_index = 0;
+                switch (key)
+                {
+                    case  GLFW_KEY_1:
+                        color_index = 0;
+                        break;
+                    case  GLFW_KEY_2:
+                        color_index = 1;
+                        break;
+                    case  GLFW_KEY_3:
+                        color_index = 2;
+                        break;
+                    case  GLFW_KEY_4:
+                        color_index = 3;
+                        break;
+                    case  GLFW_KEY_5:
+                        color_index = 4;
+                        break;
+                    case  GLFW_KEY_6:
+                        color_index = 5;
+                        break;
+                    case  GLFW_KEY_7:
+                        color_index = 6;
+                        break;
+                    case  GLFW_KEY_8:
+                        color_index = 7;
+                        break;
+                    case  GLFW_KEY_9:
+                        color_index = 8;
+                        break;
+                    default:
+                        break;
+                }
+
+                tri_V.col(v_clicked).coeffRef(2) = colors[color_index].r;
+                tri_V.col(v_clicked).coeffRef(3) = colors[color_index].g;
+                tri_V.col(v_clicked).coeffRef(4) = colors[color_index].b;
+
+                tri_VBO.update(tri_V);
+            }
+        }
     }
 }
 
 int main(void)
 {
+    colors.push_back(color(0.0f,0.0f,1.0f));
+    colors.push_back(color(0.0f,float(195./255.),1.0f));
+    colors.push_back(color(0.0f,1.0f,float(187./255.)));
+    colors.push_back(color(float(149./255.),1.0f,0.));
+    colors.push_back(color(1.0f,float(242./255.),0.));
+    colors.push_back(color(1.0f,float(106./255.),0.));
+    colors.push_back(color(1.0f,0.,float(81./255.)));
+    colors.push_back(color(1.0f,0.,float(234./255.)));
+    colors.push_back(color(float(140./255.),0.,float(227./255.)));
+
     GLFWwindow* window;
 
     // Initialize the library

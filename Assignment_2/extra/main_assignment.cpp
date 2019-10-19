@@ -28,8 +28,8 @@ VertexBufferObject line_VBO;
 VertexBufferObject tri_VBO;
 
 // Contains the vertex positions
-Eigen::MatrixXf line_V(5,1);
-Eigen::MatrixXf tri_V(5,1);
+Eigen::MatrixXf line_V(2,1);
+Eigen::MatrixXf tri_V(2,1);
 
 // bool tri_first = true;
 // bool tri_complete = false;
@@ -46,23 +46,22 @@ Vector2d start_click;
 class color
 {
     public:
-        float r = 1.0f;
-        float g = 0.0f;
-        float b = 0.0f;
+        float r;
+        float g;
+        float b;
 };
 class point
 {
     public:
         float x;
         float y;
-        color rgb;
 };
 class triangle
 {
     public:
         vector<point> v; //vector of vertices
         point center;
-
+        color rgb;
         bool clicked = false;
         vector<point> clicked_v;
 };
@@ -99,7 +98,6 @@ bool click_triangle(point click_point, triangle test_triangle)
             if(alpha < 1 && alpha >0)
             {
                 return true;
-                //TODO: turn all vertices colors blue
             }
             
         }
@@ -138,13 +136,11 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
     {
         triangles[clicked_index].v[i].x = new_vertices[i].coeff(0);
         triangles[clicked_index].v[i].y = new_vertices[i].coeff(1);
-        tri_V.col(clicked_index*3+i) << new_vertices[i].coeff(0) , new_vertices[i].coeff(1), 
-        triangles[clicked_index].v[i].rgb.r, triangles[clicked_index].v[i].rgb.g, triangles[clicked_index].v[i].rgb.b;
+        tri_V.col(clicked_index*3+i) << new_vertices[i].coeff(0) , new_vertices[i].coeff(1);
     }
 
     triangles[clicked_index].clicked_v = triangles[clicked_index].v;
     tri_VBO.update(tri_V);
-
     // Get the position of the mouse in the window
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
@@ -154,6 +150,7 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
     // Convert screen position to world coordinates
     double xworld = ((xpos/double(width))*2)-1;
     double yworld = (((height-1-ypos)/double(height))*2)-1; 
+    
     //update start click in case mouse moves again
     start_click << xworld, yworld;
 }
@@ -191,7 +188,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
         {
 
             //set line matrix column to mouse cursor position
-            line_V.col(click_count) << xworld, yworld , 0.0f, 0.0f, 0.0f;
+            line_V.col(click_count) << xworld, yworld;
 
             //update VBO
             line_VBO.update(line_V);
@@ -217,8 +214,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
                 triangles[clicked_index].v[i].x = triangles[clicked_index].clicked_v[i].x + tr.coeffRef(0);
                 triangles[clicked_index].v[i].y = triangles[clicked_index].clicked_v[i].y + tr.coeffRef(1);
 
-                tri_V.col(clicked_index*3+i) << triangles[clicked_index].v[i].x , triangles[clicked_index].v[i].y,
-                triangles[clicked_index].v[i].rgb.r, triangles[clicked_index].v[i].rgb.g, triangles[clicked_index].v[i].rgb.b;
+                tri_V.col(clicked_index*3+i) << triangles[clicked_index].v[i].x , triangles[clicked_index].v[i].y;
             }
 
             //update triangle VBO
@@ -254,7 +250,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             {
                 case  0:
                     //if it's the first click set first column of line matrix to click position
-                    line_V.col(click_count) << xworld, yworld, 0.0f, 0.0f, 0.0f;
+                    line_V.col(click_count) << xworld, yworld;
                     click_count = click_count+1;
                     mouse_move=false;
                     break;
@@ -262,10 +258,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     //on the second click, add click position to line matrix
                     //then draw a line strip using the following line matrix
                     //first click, second click, wherever the mouse cursor is, and first click
-                    line_V.col(click_count) << xworld, yworld, 0.0f, 0.0f, 0.0f;
+                    line_V.col(click_count) << xworld, yworld;
                     
                     //third vertex in matrix starts as the same as second vertex as a placeholder
-                    line_V.col(line_V.cols()-1) << xworld, yworld, 0.0f, 0.0f, 0.0f;;
+                    line_V.col(line_V.cols()-1) << xworld, yworld;
 
                     line_V.conservativeResize(NoChange ,line_V.cols()+1);
 
@@ -281,10 +277,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     triangle new_triangle;
                     point new_vertex;
 
-
                     for(unsigned i=0; i<3; i++)
                     {
-                        line_V.col(i).coeffRef(2) = 1.0f;
                         tri_V.col(insert_start+i) << line_V.col(i);
 
                         new_vertex.x = line_V.col(i).coeffRef(0);
@@ -301,7 +295,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     num_triangles++;
 
                     //clear line matrix
-                    line_V = MatrixXf::Zero(5,1);
+                    line_V = Eigen::MatrixXf::Zero(2,1),
                     //reset click count
                     click_count=0;
                     break;
@@ -317,7 +311,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 tri_clicked = false;
                 clicked_index = 0;
                 click_count = 0;
-                //TODO: set color to original color
             }
             else
             {
@@ -335,7 +328,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         start_click << click_point.x, click_point.y;
                         triangles[i].clicked_v = triangles[i].v;
                         click_count++;
-                        //TODO: Set vertex colors to blue
                     }
                 }
             }
@@ -520,11 +512,11 @@ int main(void)
     // Initialize the VBO with the vertices data
     // A VBO is a data container that lives in the GPU memory
     line_VBO.init();
-    line_V.resize(5,1);
+    line_V.resize(2,1);
     line_VBO.update(line_V);
 
     tri_VBO.init();
-    tri_V.resize(5,1);
+    tri_V.resize(2,1);
     tri_VBO.update(tri_V);
 
     // Initialize the OpenGL Program
@@ -534,24 +526,23 @@ int main(void)
     const GLchar* vertex_shader =
             "#version 150 core\n"
                     "in vec2 position;"
-                    "in vec3 inColor;"
-                    "out vec3 vertexColor;"
                     "void main()"
                     "{"
-                    "    vertexColor = inColor;"
                     "    gl_Position = vec4(position, 0.0, 1.0);"
                     "}";
     const GLchar* fragment_shader =
             "#version 150 core\n"
-                    "in vec3 vertexColor;"
-                    "out vec4 fragmentColor;"
+                    "out vec4 outColor;"
+                    "uniform vec3 triangleColor;"
                     "void main()"
                     "{"
-                    "    fragmentColor = vec4(vertexColor, 1.0);"
+                    "    outColor = vec4(triangleColor, 1.0);"
                     "}";
 
     // Compile the two shaders and upload the binary to the GPU
-    program.init(vertex_shader,fragment_shader,"fragmentColor");
+    // Note that we have to explicitly specify that the output "slot" called outColor
+    // is the one that we want in the fragment buffer (and thus on screen)
+    program.init(vertex_shader,fragment_shader,"outColor");
     program.bind();
 
     // The vertex shader wants the position of the vertices as an input.
@@ -591,17 +582,20 @@ int main(void)
 
 
         // Draw all complete triangles
-        //TODO: remove num_triangles from code
         if(num_triangles>0)
         {
-            tri_VBO.bind();
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
-
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (const GLvoid *)8);
+            program.bindVertexAttribArray("position",tri_VBO);
             for(unsigned i=0; i<triangles.size(); i++)
             {
+                if(tri_clicked && i == clicked_index)
+                {
+                    glUniform3f(program.uniform("triangleColor"), 0.0f, 0.0f, 1.0f);
+                }
+                else
+                {
+                    glUniform3f(program.uniform("triangleColor"), 1.0f, 0.0f, 0.0f);
+                }
+                
                 //draw triangles
                 glDrawArrays(GL_TRIANGLES, i*3, 3);
             }
@@ -612,16 +606,10 @@ int main(void)
         //if a line is being drawn
         if(tri_insert_mode)
         {
-            line_VBO.bind();
-
-
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (const GLvoid *)8);
-
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
+            program.bindVertexAttribArray("position",line_VBO);
             if(click_count>0)
             {
+                glUniform3f(program.uniform("triangleColor"), 0.0f, 0.0f, 0.0f);
                 if(mouse_move)
                 {
                     glDrawArrays(GL_LINE_STRIP,0,line_V.cols());

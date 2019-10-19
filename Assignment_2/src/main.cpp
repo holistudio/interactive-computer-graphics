@@ -32,6 +32,8 @@ VertexBufferObject tri_VBO;
 Eigen::MatrixXf line_V(5,1);
 Eigen::MatrixXf tri_V(5,1);
 
+Matrix2f view_scale;
+
 // bool tri_first = true;
 // bool tri_complete = false;
 char mode = ' ';
@@ -495,6 +497,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 click_count = 0; 
                 std::cout << "Vertex Color Mode" << std::endl;
                 break;
+            case  GLFW_KEY_EQUAL: //TODO: see if you can combine this with SHIFT key so it's actually '+' sign
+                view_scale = view_scale + 0.2*MatrixXf::Identity(2,2);
+                break;
+            case  GLFW_KEY_MINUS: //TODO: see if you can combine this with SHIFT key so it's actually '+' sign
+                view_scale = view_scale - 0.2*MatrixXf::Identity(2,2);;
+                break;
             default:
                 break;
         }
@@ -671,6 +679,8 @@ int main(void)
     tri_V.resize(5,1);
     tri_VBO.update(tri_V);
 
+    view_scale << 1, 0, 0, 1;
+
     // Initialize the OpenGL Program
     // A program controls the OpenGL pipeline and it must contains
     // at least a vertex shader and a fragment shader to be valid
@@ -679,11 +689,12 @@ int main(void)
             "#version 150 core\n"
                     "in vec2 position;"
                     "in vec3 inColor;"
+                    "uniform mat2 scale;"
                     "out vec3 vertexColor;"
                     "void main()"
                     "{"
                     "    vertexColor = inColor;"
-                    "    gl_Position = vec4(position, 0.0, 1.0);"
+                    "    gl_Position = vec4(scale * position, 0.0, 1.0);"
                     "}";
     const GLchar* fragment_shader =
             "#version 150 core\n"
@@ -726,9 +737,9 @@ int main(void)
         // Bind your program
         program.bind();
 
-        // Set the uniform value depending on the time difference
+        // Set the uniform view matrix and translation vectors
+        glUniformMatrix2fv(program.uniform("scale"),1, GL_FALSE, view_scale.data());
         
-
         // Clear the framebuffer
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);

@@ -127,7 +127,7 @@ point screen_to_world(GLFWwindow* window)
 
     Vector2f screen_pos;
     screen_pos << float(xworld), float(yworld);
-    screen_pos = inv_scale * (screen_pos - view_pos);
+    screen_pos = inv_scale * screen_pos - view_pos;
 
     xworld = double(screen_pos.coeff(0));
     yworld = double(screen_pos.coeff(1));
@@ -332,7 +332,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         }
 
                         triangles.push_back(new_triangle);
-
+                        cout << tri_V <<endl;
                         //update triangle VBO
                         tri_VBO.update(tri_V);
 
@@ -518,6 +518,30 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
             case  GLFW_KEY_S:
                 view_pos = view_pos + (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
+                break;
+            case  GLFW_KEY_A:
+                view_pos = view_pos + (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
+                break;
+            case  GLFW_KEY_D:
+                view_pos = view_pos - (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
+                break;
+            case  GLFW_KEY_T:
+                //insert triangles for testing view scaling and translation
+
+                //with no initial zoom or translation,
+                //black triangle tip will touch the screen edge after pressing 'S' key once, 
+                //demonstrating that the view is translated 20% of screen height
+
+                //with no initial zoom or translation,
+                //red triangle tip will touch screen edge after pressing '+' key once and 'S' key once
+                //demonstrating that the view is *consistently* translated 20% of screen height
+                tri_V.conservativeResize(5,6);
+                tri_V << 0, 0.5, -0.5, 0, 0.5, -0.5,
+                        0.6,  0, 0, 0.5, 0, 0,
+                        0.0, 0.0, 0.0, 1.0, 1.0, 1.0,
+                        0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0;
+                tri_VBO.update(tri_V);
                 break;
             default:
                 break;
@@ -712,7 +736,7 @@ int main(void)
                     "void main()"
                     "{"
                     "    vertexColor = inColor;"
-                    "    gl_Position = vec4(scale * position + translation, 0.0, 1.0);"
+                    "    gl_Position = vec4(scale * (position + translation), 0.0, 1.0);"
                     "}";
     const GLchar* fragment_shader =
             "#version 150 core\n"
@@ -765,8 +789,7 @@ int main(void)
 
 
         // Draw all complete triangles
-        //TODO: remove num_triangles from code
-        if(num_triangles>0)
+        if(tri_V.cols()>0)
         {
             tri_VBO.bind();
             glEnableVertexAttribArray(1);
@@ -774,12 +797,11 @@ int main(void)
 
             glEnableVertexAttribArray(0);
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (const GLvoid *)8);
-            for(unsigned i=0; i<triangles.size(); i++)
+            for(unsigned i=0; i<tri_V.cols()/3; i++)
             {
                 //draw triangles
                 glDrawArrays(GL_TRIANGLES, i*3, 3);
             }
-
         }
 
         

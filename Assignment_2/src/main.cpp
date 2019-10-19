@@ -33,6 +33,7 @@ Eigen::MatrixXf line_V(5,1);
 Eigen::MatrixXf tri_V(5,1);
 
 Matrix2f view_scale;
+Vector2f view_pos;
 
 // bool tri_first = true;
 // bool tri_complete = false;
@@ -114,10 +115,8 @@ point screen_to_world(GLFWwindow* window)
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
 
-    //Matrix2f inv_scale = MatrixXf::Identity(2,2) - (view_scale - MatrixXf::Identity(2,2));
     Matrix2f inv_scale;
     inv_scale << 1/view_scale.coeff(0,0),0,0,1/view_scale.coeff(1,1);
-
 
     // Get the size of the window
     int width, height;
@@ -128,7 +127,7 @@ point screen_to_world(GLFWwindow* window)
 
     Vector2f screen_pos;
     screen_pos << float(xworld), float(yworld);
-    screen_pos = inv_scale * screen_pos;
+    screen_pos = inv_scale * (screen_pos - view_pos);
 
     xworld = double(screen_pos.coeff(0));
     yworld = double(screen_pos.coeff(1));
@@ -479,6 +478,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+        // Get the size of the window
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
     //only perform action on key press, not key release
     if(action == GLFW_PRESS)
     {
@@ -508,8 +510,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case  GLFW_KEY_EQUAL: //TODO: see if you can combine this with SHIFT key so it's actually '+' sign
                 view_scale = view_scale + 0.2*MatrixXf::Identity(2,2);
                 break;
-            case  GLFW_KEY_MINUS: //TODO: see if you can combine this with SHIFT key so it's actually '+' sign
+            case  GLFW_KEY_MINUS:
                 view_scale = view_scale - 0.2*MatrixXf::Identity(2,2);
+                break;
+            case  GLFW_KEY_W:
+                view_pos = view_pos - (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
+                break;
+            case  GLFW_KEY_S:
+                view_pos = view_pos + (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
                 break;
             default:
                 break;
@@ -688,6 +696,7 @@ int main(void)
     tri_VBO.update(tri_V);
 
     view_scale << 1, 0, 0, 1;
+    view_pos << 0, 0;
 
     // Initialize the OpenGL Program
     // A program controls the OpenGL pipeline and it must contains
@@ -698,11 +707,12 @@ int main(void)
                     "in vec2 position;"
                     "in vec3 inColor;"
                     "uniform mat2 scale;"
+                    "uniform vec2 translation;"
                     "out vec3 vertexColor;"
                     "void main()"
                     "{"
                     "    vertexColor = inColor;"
-                    "    gl_Position = vec4(scale * position, 0.0, 1.0);"
+                    "    gl_Position = vec4(scale * position + translation, 0.0, 1.0);"
                     "}";
     const GLchar* fragment_shader =
             "#version 150 core\n"
@@ -747,6 +757,7 @@ int main(void)
 
         // Set the uniform view matrix and translation vectors
         glUniformMatrix2fv(program.uniform("scale"),1, GL_FALSE, view_scale.data());
+        glUniform2fv(program.uniform("translation"),1, view_pos.data());
         
         // Clear the framebuffer
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);

@@ -311,19 +311,29 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
         if(tri_move_mode)
         {
-            //check if click coordinates is in any triangles
-            point click_point;
-            click_point.x = xworld;
-            click_point.y = yworld;
-
-            for(unsigned i=0; i<triangles.size(); i++)
+            if(click_count>0)
             {
-                if(click_triangle(click_point,triangles[i]))
+                tri_clicked = false;
+                clicked_index = 0;
+                click_count = 0;
+            }
+            else
+            {
+                //check if click coordinates is in any triangles
+                point click_point;
+                click_point.x = xworld;
+                click_point.y = yworld;
+
+                for(unsigned i=0; i<triangles.size(); i++)
                 {
-                    tri_clicked = true;
-                    clicked_index = i;
-                    start_click << click_point.x, click_point.y;
-                    triangles[i].clicked_v = triangles[i].v;
+                    if(click_triangle(click_point,triangles[i]))
+                    {
+                        tri_clicked = true;
+                        clicked_index = i;
+                        start_click << click_point.x, click_point.y;
+                        triangles[i].clicked_v = triangles[i].v;
+                        click_count++;
+                    }
                 }
             }
         } 
@@ -377,18 +387,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 tri_insert_mode = true;
                 tri_move_mode = false;
                 tri_delete_mode = false;
+                click_count = 0;
                 std::cout << "Triangle Insert Mode" << std::endl;
                 break;
             case  GLFW_KEY_O:
                 tri_insert_mode = false;
                 tri_move_mode = true;
                 tri_delete_mode = false;
+                click_count = 0;
                 std::cout << "Triangle Move Mode" << std::endl;
                 break;
             case  GLFW_KEY_P:
                 tri_insert_mode = false;
                 tri_move_mode = false;
                 tri_delete_mode = true;
+                click_count = 0;
                 std::cout << "Triangle Delete Mode" << std::endl;
                 break;
             case  GLFW_KEY_H:

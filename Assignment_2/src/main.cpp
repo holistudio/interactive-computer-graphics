@@ -419,6 +419,22 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     transform_triangle(window, triangles[clicked_index], rotation);
                 }
                 break;
+            case  GLFW_KEY_K:
+                if(tri_clicked)
+                {
+                    Matrix2f scale;
+                    scale << 1.25, 0, 0, 1.25;
+                    transform_triangle(window, triangles[clicked_index], scale);
+                }
+                break;
+            case  GLFW_KEY_L:
+                if(tri_clicked)
+                {
+                    Matrix2f scale;
+                    scale << 0.75, 0, 0, 0.75;
+                    transform_triangle(window, triangles[clicked_index], scale);
+                }
+                break;
             default:
                 break;
         }

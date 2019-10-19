@@ -138,8 +138,8 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
     {
         triangles[clicked_index].v[i].x = new_vertices[i].coeff(0);
         triangles[clicked_index].v[i].y = new_vertices[i].coeff(1);
-        tri_V.col(clicked_index*3+i) << new_vertices[i].coeff(0) , new_vertices[i].coeff(1), 
-        triangles[clicked_index].v[i].rgb.r, triangles[clicked_index].v[i].rgb.g, triangles[clicked_index].v[i].rgb.b;
+        tri_V.col(clicked_index*3+i).coeffRef(0) = new_vertices[i].coeff(0);
+        tri_V.col(clicked_index*3+i).coeffRef(1) = new_vertices[i].coeff(1);
     }
 
     triangles[clicked_index].clicked_v = triangles[clicked_index].v;
@@ -217,8 +217,8 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
                 triangles[clicked_index].v[i].x = triangles[clicked_index].clicked_v[i].x + tr.coeffRef(0);
                 triangles[clicked_index].v[i].y = triangles[clicked_index].clicked_v[i].y + tr.coeffRef(1);
 
-                tri_V.col(clicked_index*3+i) << triangles[clicked_index].v[i].x , triangles[clicked_index].v[i].y,
-                triangles[clicked_index].v[i].rgb.r, triangles[clicked_index].v[i].rgb.g, triangles[clicked_index].v[i].rgb.b;
+                tri_V.col(clicked_index*3+i).coeffRef(0)=triangles[clicked_index].v[i].x;
+                tri_V.col(clicked_index*3+i).coeffRef(1)=triangles[clicked_index].v[i].y;
             }
 
             //update triangle VBO
@@ -323,9 +323,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     triangles[clicked_index].v[i].rgb.g = 0.0f;
                     triangles[clicked_index].v[i].rgb.b = 0.0f;
 
-                    tri_V.col(clicked_index+i).coeffRef(2) = 1.0f;
-                    tri_V.col(clicked_index+i).coeffRef(3) = 0.0f;
-                    tri_V.col(clicked_index+i).coeffRef(4) = 0.0f;
+                    tri_V.col(clicked_index*3+i).coeffRef(2) = 1.0f;
+                    tri_V.col(clicked_index*3+i).coeffRef(3) = 0.0f;
+                    tri_V.col(clicked_index*3+i).coeffRef(4) = 0.0f;
                 }
                 tri_VBO.update(tri_V);
 
@@ -359,9 +359,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     triangles[clicked_index].v[i].rgb.g = 0.0f;
                     triangles[clicked_index].v[i].rgb.b = 1.0f;
 
-                    tri_V.col(clicked_index+i).coeffRef(2) = 0.0f;
-                    tri_V.col(clicked_index+i).coeffRef(3) = 0.0f;
-                    tri_V.col(clicked_index+i).coeffRef(4) = 1.0f;
+                    tri_V.col(clicked_index*3+i).coeffRef(2) = 0.0f;
+                    tri_V.col(clicked_index*3+i).coeffRef(3) = 0.0f;
+                    tri_V.col(clicked_index*3+i).coeffRef(4) = 1.0f;
                 }
                 
                 tri_VBO.update(tri_V);
@@ -474,9 +474,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
         }
     }
-
-    // Upload the change to the GPU
-    line_VBO.update(line_V);
 }
 
 int main(void)

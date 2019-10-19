@@ -105,6 +105,61 @@ bool click_triangle(point click_point, triangle test_triangle)
     return false;
 }
 
+void rotate_triangle(GLFWwindow* window, triangle sel_triangle, float degrees)
+{
+    vector<Vector2f> new_vertices;
+    //rotation matrix
+    float radians = degrees * 3.141592f / 180;
+    Matrix2f rotation;
+    rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
+
+    //find barycentric center
+    Vector2f v1 = Vector2f(sel_triangle.v[0].x,sel_triangle.v[0].y);
+    Vector2f v2 = Vector2f(sel_triangle.v[1].x,sel_triangle.v[1].y);
+    Vector2f v3 = Vector2f(sel_triangle.v[2].x,sel_triangle.v[2].y);
+    Vector2f bary_center = (v1 + v2 + v3)/3;
+
+    // subtract the coordinates of the centre from each vertex
+    v1 = v1 - bary_center;
+    v2 = v2 - bary_center;
+    v3 = v3 - bary_center;
+
+    // Then multiply each new vertex by the rotation matrix
+    v1 = rotation * v1;
+    v2 = rotation * v2;
+    v3 = rotation * v3;
+
+    // add back the centre coordinates to each rotated vertex
+    v1 = v1 + bary_center;
+    v2 = v2 + bary_center;
+    v3 = v3 + bary_center;
+    new_vertices.push_back(v1);
+    new_vertices.push_back(v2);
+    new_vertices.push_back(v3);
+
+    for(unsigned i = 0; i<new_vertices.size(); i++)
+    {
+        triangles[clicked_index].v[i].x = new_vertices[i].coeff(0);
+        triangles[clicked_index].v[i].y = new_vertices[i].coeff(1);
+        tri_V.col(clicked_index*3+i) << new_vertices[i].coeff(0) , new_vertices[i].coeff(1);
+    }
+
+    triangles[clicked_index].clicked_v = triangles[clicked_index].v;
+    tri_VBO.update(tri_V);
+    // Get the position of the mouse in the window
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+    // Get the size of the window
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    // Convert screen position to world coordinates
+    double xworld = ((xpos/double(width))*2)-1;
+    double yworld = (((height-1-ypos)/double(height))*2)-1; 
+    
+    //update start click in case mouse moves again
+    start_click << xworld, yworld;
+}
+
 void removeColumn(MatrixXf& matrix, unsigned int colToRemove)
 {
     //Eigen matrix column remover function courtesy of https://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
@@ -294,50 +349,63 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             tri_VBO.update(tri_V);
         }
     }
-    else
-    {
-        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-        {
-            if(tri_move_mode)
-            {
-                tri_clicked = false;
-                clicked_index = 0;
-            } 
-        }
-    }
+    // The follow commented out section of code is meant only for Task 1.1
+    // where releasing the left mouse button "releases" the clicked triangle.
+    // For Task 1.2 onwards, the triangle remains "selected" after mouse button release
+    // to allow for rotation and scaling
+    // else
+    // {
+    //     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+    //     {
+    //         if(tri_move_mode)
+    //         {
+    //             tri_clicked = false;
+    //             clicked_index = 0;
+    //         } 
+    //     }
+    // }
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    // Update the position of the first vertex if the keys 1,2, or 3 are pressed
-    switch (key)
+    //only perform action on key press, not key release
+    if(action == GLFW_PRESS)
     {
-        case  GLFW_KEY_I:
-            tri_insert_mode = true;
-            tri_move_mode = false;
-            tri_delete_mode = false;
-            std::cout << "Triangle Insert Mode" << std::endl;
-            break;
-        case  GLFW_KEY_O:
-            tri_insert_mode = false;
-            tri_move_mode = true;
-            tri_delete_mode = false;
-            std::cout << "Triangle Move Mode" << std::endl;
-            break;
-        case  GLFW_KEY_P:
-            tri_insert_mode = false;
-            tri_move_mode = false;
-            tri_delete_mode = true;
-            std::cout << "Triangle Delete Mode" << std::endl;
-            break;
-        // case  GLFW_KEY_H:
-            // First subtract the coordinates of the centre
-            // from each vertex coordinate. Then multiply each new vertex by the rotation matrix for clockwise rotation by 30 degrees, i.e.
-            // (cos(−10)sin(−10)−sin(−10)cos(−10))
-            // to obtain three new rotated vertices. Then add back the centre coordinates to each rotated vertex.
-            // break;
-        default:
-            break;
+        switch (key)
+        {
+            case  GLFW_KEY_I:
+                tri_insert_mode = true;
+                tri_move_mode = false;
+                tri_delete_mode = false;
+                std::cout << "Triangle Insert Mode" << std::endl;
+                break;
+            case  GLFW_KEY_O:
+                tri_insert_mode = false;
+                tri_move_mode = true;
+                tri_delete_mode = false;
+                std::cout << "Triangle Move Mode" << std::endl;
+                break;
+            case  GLFW_KEY_P:
+                tri_insert_mode = false;
+                tri_move_mode = false;
+                tri_delete_mode = true;
+                std::cout << "Triangle Delete Mode" << std::endl;
+                break;
+            case  GLFW_KEY_H:
+                if(tri_clicked)
+                {
+                    rotate_triangle(window, triangles[clicked_index],-10);
+                }
+                break;
+            case  GLFW_KEY_J:
+                if(tri_clicked)
+                {
+                    rotate_triangle(window, triangles[clicked_index],10);
+                }
+                break;
+            default:
+                break;
+        }
     }
 
     // Upload the change to the GPU

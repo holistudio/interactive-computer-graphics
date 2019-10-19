@@ -53,7 +53,7 @@ class color
         float b;
         color()
         {
-            r = 1.0;
+            r = 0.0;
             g = 0.0;
             b = 0.0;
         }
@@ -72,6 +72,18 @@ class point
         float x;
         float y;
         color rgb;
+        point()
+        {
+            x=0.0;
+            y=0.0;
+            rgb= color();
+        }
+        point(float x1, float y1, color c1)
+        {
+            x = x1;
+            y = y1;
+            rgb = c1;
+        }
 };
 class triangle
 {
@@ -94,6 +106,33 @@ vector<color> colors;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
+}
+
+point screen_to_world(GLFWwindow* window)
+{
+    // Get the position of the mouse in the window
+    double xpos, ypos;
+    glfwGetCursorPos(window, &xpos, &ypos);
+
+    //Matrix2f inv_scale = MatrixXf::Identity(2,2) - (view_scale - MatrixXf::Identity(2,2));
+    Matrix2f inv_scale;
+    inv_scale << 1/view_scale.coeff(0,0),0,0,1/view_scale.coeff(1,1);
+
+
+    // Get the size of the window
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    // Convert screen position to world coordinates
+    double xworld = ((xpos/double(width))*2)-1;
+    double yworld = (((height-1-ypos)/double(height))*2)-1; 
+
+    Vector2f screen_pos;
+    screen_pos << float(xworld), float(yworld);
+    screen_pos = inv_scale * screen_pos;
+
+    xworld = double(screen_pos.coeff(0));
+    yworld = double(screen_pos.coeff(1));
+    return point(xworld, yworld, color());
 }
 
 bool click_triangle(point click_point, triangle test_triangle)
@@ -165,17 +204,8 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
     triangles[clicked_index].clicked_v = triangles[clicked_index].v;
     tri_VBO.update(tri_V);
 
-    // Get the position of the mouse in the window
-    double xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
-    // Get the size of the window
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-    // Convert screen position to world coordinates
-    double xworld = ((xpos/double(width))*2)-1;
-    double yworld = (((height-1-ypos)/double(height))*2)-1; 
-    //update start click in case mouse moves again
-    start_click << xworld, yworld;
+    point world_click = screen_to_world(window);
+    start_click << world_click.x, world_click.y;
 }
 
 void removeColumn(MatrixXf& matrix, unsigned int colToRemove)
@@ -193,13 +223,7 @@ void removeColumn(MatrixXf& matrix, unsigned int colToRemove)
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    // Get the size of the window
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-
-    // Convert screen position to world coordinates
-    double xworld = ((xpos/double(width))*2)-1;
-    double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
+    point world_click = screen_to_world(window);
 
     switch (mode)
     {
@@ -210,7 +234,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             {
 
                 //set line matrix column to mouse cursor position
-                line_V.col(click_count) << xworld, yworld , 0.0f, 0.0f, 0.0f;
+                line_V.col(click_count) << world_click.x, world_click.y , 0.0f, 0.0f, 0.0f;
 
                 //update VBO
                 line_VBO.update(line_V);
@@ -224,7 +248,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             {
                 //set current mouse position to vector mouse_pos
                 Vector2d mouse_pos;
-                mouse_pos << xworld, yworld;
+                mouse_pos << world_click.x, world_click.y;
                 
                 //calculated difference btw start_click and mouse_pos
                 Vector2d tr = mouse_pos - start_click;
@@ -250,17 +274,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-    // Get the position of the mouse in the window
-    double xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
-
-    // Get the size of the window
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-
-    // Convert screen position to world coordinates
-    double xworld = ((xpos/double(width))*2)-1;
-    double yworld = (((height-1-ypos)/double(height))*2)-1; // NOTE: y axis is flipped in glfw
+    point world_click = screen_to_world(window);
 
     // Add mouse click coordinates to V if the left button is pressed
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
@@ -278,7 +292,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     case  0:
                     {
                         //if it's the first click set first column of line matrix to click position
-                        line_V.col(click_count) << xworld, yworld, 0.0f, 0.0f, 0.0f;
+                        line_V.col(click_count) << world_click.x, world_click.y, 0.0f, 0.0f, 0.0f;
                         click_count = click_count+1;
                         mouse_move=false;
                         break;
@@ -288,10 +302,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         //on the second click, add click position to line matrix
                         //then draw a line strip using the following line matrix
                         //first click, second click, wherever the mouse cursor is, and first click
-                        line_V.col(click_count) << xworld, yworld, 0.0f, 0.0f, 0.0f;
+                        line_V.col(click_count) << world_click.x, world_click.y, 0.0f, 0.0f, 0.0f;
                         
                         //third vertex in matrix starts as the same as second vertex as a placeholder
-                        line_V.col(line_V.cols()-1) << xworld, yworld, 0.0f, 0.0f, 0.0f;;
+                        line_V.col(line_V.cols()-1) << world_click.x, world_click.y, 0.0f, 0.0f, 0.0f;;
 
                         line_V.conservativeResize(NoChange ,line_V.cols()+1);
 
@@ -365,17 +379,14 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 else
                 {
                     //check if click coordinates is in any triangles
-                    point click_point;
-                    click_point.x = xworld;
-                    click_point.y = yworld;
 
                     for(unsigned i=0; i<triangles.size(); i++)
                     {
-                        if(click_triangle(click_point,triangles[i]))
+                        if(click_triangle(world_click,triangles[i]))
                         {
                             tri_clicked = true;
                             clicked_index = i;
-                            start_click << click_point.x, click_point.y;
+                            start_click << world_click.x, world_click.y;
                             triangles[i].clicked_v = triangles[i].v;
                             
                             click_count++;
@@ -400,13 +411,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             case 'd':
             {
                 //check if click coordinates is in any triangles
-                point click_point;
-                click_point.x = xworld;
-                click_point.y = yworld;
 
                 for(unsigned i=0; i<triangles.size(); i++)
                 {
-                    if(click_triangle(click_point,triangles[i]))
+                    if(click_triangle(world_click,triangles[i]))
                     {
                         triangles.erase(triangles.begin()+i);
                         removeColumn(tri_V,i*3);
@@ -427,7 +435,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 for(unsigned i=0; i<tri_V.cols()-1; i++)
                 {
                     //calculate distance between mouse click and vertex, v_dist
-                    v_dist = (tri_V.col(i).coeff(0) - xworld)*(tri_V.col(i).coeff(0) - xworld) + (tri_V.col(i).coeff(1) - yworld)*(tri_V.col(i).coeff(1) - yworld);
+                    v_dist = (tri_V.col(i).coeff(0) - world_click.x)*(tri_V.col(i).coeff(0) - world_click.x) + (tri_V.col(i).coeff(1) - world_click.y)*(tri_V.col(i).coeff(1) - world_click.y);
 
                     //if distance is less than min_dist
                     if(v_dist < min_dist)
@@ -501,7 +509,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 view_scale = view_scale + 0.2*MatrixXf::Identity(2,2);
                 break;
             case  GLFW_KEY_MINUS: //TODO: see if you can combine this with SHIFT key so it's actually '+' sign
-                view_scale = view_scale - 0.2*MatrixXf::Identity(2,2);;
+                view_scale = view_scale - 0.2*MatrixXf::Identity(2,2);
                 break;
             default:
                 break;

@@ -470,49 +470,53 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 click_count = 0;
                 std::cout << "Triangle Delete Mode" << std::endl;
                 break;
-            case  GLFW_KEY_H:
-                if(tri_clicked)
+            case  GLFW_KEY_C:
+                mode = 'c';
+                //click_count = 0; //TODO: maybe not needed
+                std::cout << "Vertex Color Mode" << std::endl;
+                break;
+            default:
+                break;
+        }
+        if(tri_clicked)
+        {
+            switch (key)
+            {
+                case  GLFW_KEY_H:
                 {
                     //rotation matrix
                     float radians = -10 * 3.141592f / 180;
                     Matrix2f rotation;
                     rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
                     transform_triangle(window, triangles[clicked_index], rotation);
+                    break;
                 }
-                break;
-            case  GLFW_KEY_J:
-                if(tri_clicked)
+                case  GLFW_KEY_J:
                 {
                     //rotation matrix
                     float radians = 10 * 3.141592f / 180;
                     Matrix2f rotation;
                     rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
                     transform_triangle(window, triangles[clicked_index], rotation);
+                    break;
                 }
-                break;
-            case  GLFW_KEY_K:
-                if(tri_clicked)
+                case  GLFW_KEY_K:
                 {
                     Matrix2f scale;
                     scale << 1.25, 0, 0, 1.25;
                     transform_triangle(window, triangles[clicked_index], scale);
+                    break;
                 }
-                break;
-            case  GLFW_KEY_L:
-                if(tri_clicked)
+                case  GLFW_KEY_L:
                 {
                     Matrix2f scale;
                     scale << 0.75, 0, 0, 0.75;
                     transform_triangle(window, triangles[clicked_index], scale);
+                    break;
                 }
-                break;
-            case  GLFW_KEY_C:
-                mode = 'c';
-                click_count = 0; //TODO: maybe not needed
-                std::cout << "Vertex Color Mode" << std::endl;
-                break;
-            default:
-                break;
+                default:
+                    break;
+            }
         }
     }
 }

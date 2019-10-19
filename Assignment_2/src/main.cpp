@@ -105,14 +105,9 @@ bool click_triangle(point click_point, triangle test_triangle)
     return false;
 }
 
-void rotate_triangle(GLFWwindow* window, triangle sel_triangle, float degrees)
+void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f transform)
 {
     vector<Vector2f> new_vertices;
-    //rotation matrix
-    float radians = degrees * 3.141592f / 180;
-    Matrix2f rotation;
-    rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
-
     //find barycentric center
     Vector2f v1 = Vector2f(sel_triangle.v[0].x,sel_triangle.v[0].y);
     Vector2f v2 = Vector2f(sel_triangle.v[1].x,sel_triangle.v[1].y);
@@ -125,9 +120,9 @@ void rotate_triangle(GLFWwindow* window, triangle sel_triangle, float degrees)
     v3 = v3 - bary_center;
 
     // Then multiply each new vertex by the rotation matrix
-    v1 = rotation * v1;
-    v2 = rotation * v2;
-    v3 = rotation * v3;
+    v1 = transform * v1;
+    v2 = transform * v2;
+    v3 = transform * v3;
 
     // add back the centre coordinates to each rotated vertex
     v1 = v1 + bary_center;
@@ -407,13 +402,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case  GLFW_KEY_H:
                 if(tri_clicked)
                 {
-                    rotate_triangle(window, triangles[clicked_index],-10);
+                    //rotation matrix
+                    float radians = -10 * 3.141592f / 180;
+                    Matrix2f rotation;
+                    rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
+                    transform_triangle(window, triangles[clicked_index], rotation);
                 }
                 break;
             case  GLFW_KEY_J:
                 if(tri_clicked)
                 {
-                    rotate_triangle(window, triangles[clicked_index],10);
+                    //rotation matrix
+                    float radians = 10 * 3.141592f / 180;
+                    Matrix2f rotation;
+                    rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
+                    transform_triangle(window, triangles[clicked_index], rotation);
                 }
                 break;
             default:

@@ -94,7 +94,6 @@ class triangle
 
         bool clicked = false;
         int clicked_index; //start index on tri_V matrix
-        vector<point> clicked_v;
 };
 
 int v_clicked = 0;
@@ -166,10 +165,10 @@ bool click_triangle(point click_point, triangle test_triangle)
 void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f transform)
 {
     vector<Vector2f> new_vertices;
-    //find barycentric center
-    Vector2f v1 = Vector2f(sel_triangle.v[0].x,sel_triangle.v[0].y);
-    Vector2f v2 = Vector2f(sel_triangle.v[1].x,sel_triangle.v[1].y);
-    Vector2f v3 = Vector2f(sel_triangle.v[2].x,sel_triangle.v[2].y);
+    //find barycentric center, referencing the current rendered positions of the triangles
+    Vector2f v1 = Vector2f(tri_V.col(sel_triangle.clicked_index).coeff(0),tri_V.col(sel_triangle.clicked_index).coeff(1));
+    Vector2f v2 = Vector2f(tri_V.col(sel_triangle.clicked_index+1).coeff(0),tri_V.col(sel_triangle.clicked_index+1).coeff(1));
+    Vector2f v3 = Vector2f(tri_V.col(sel_triangle.clicked_index+2).coeff(0),tri_V.col(sel_triangle.clicked_index+2).coeff(1));
     Vector2f bary_center = (v1 + v2 + v3)/3;
 
     // subtract the coordinates of the centre from each vertex
@@ -198,7 +197,6 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
         tri_V.col(clicked_triangle.clicked_index+i).coeffRef(1) = new_vertices[i].coeff(1);
     }
 
-    clicked_triangle.clicked_v = clicked_triangle.v;
     tri_VBO.update(tri_V);
 
     point world_click = screen_to_world(window);
@@ -225,6 +223,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     switch (mode)
     {
         case 'i':
+        {
             //after the first click, draw a segment from first click to wherever the mouse cursor is
             //(continuously set the last column of the line matrix to mouse cursor position)
             if(click_count>0)
@@ -240,29 +239,29 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
                 mouse_move = true;
             }
             break;
+        }
         case 'm':
+        {
             if(clicked_triangle.clicked)
             {
                 //set current mouse position to vector mouse_pos
                 Vector2d mouse_pos;
                 mouse_pos << world_click.x, world_click.y;
-                
+
                 //calculated difference btw start_click and mouse_pos
                 Vector2d tr = mouse_pos - start_click;
                 //translate all vertices of the clicked triangle
                 for(unsigned i = 0; i < clicked_triangle.v.size(); i++)
                 {
-                    clicked_triangle.v[i].x = clicked_triangle.clicked_v[i].x + tr.coeffRef(0);
-                    clicked_triangle.v[i].y = clicked_triangle.clicked_v[i].y + tr.coeffRef(1);
-
-                    tri_V.col(clicked_triangle.clicked_index+i).coeffRef(0)=clicked_triangle.v[i].x;
-                    tri_V.col(clicked_triangle.clicked_index+i).coeffRef(1)=clicked_triangle.v[i].y;
+                    tri_V.col(clicked_triangle.clicked_index+i).coeffRef(0)=clicked_triangle.v[i].x + tr.coeffRef(0);;
+                    tri_V.col(clicked_triangle.clicked_index+i).coeffRef(1)=clicked_triangle.v[i].y + tr.coeffRef(1);
                 }
 
                 //update triangle VBO
                 tri_VBO.update(tri_V);
             }
             break;
+        }
         default:
             break;
     }
@@ -386,7 +385,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                             clicked_triangle.clicked = true;
                             clicked_triangle.clicked_index = i;
                             start_click << world_click.x, world_click.y;
-                            clicked_triangle.clicked_v = test_triangle.v;
                             
                             click_count++;
                         }
@@ -547,6 +545,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
         if(clicked_triangle.clicked)
         {
+            point world_click = screen_to_world(window);
+            start_click << double(world_click.x), double(world_click.y);
+
             switch (key)
             {
                 case  GLFW_KEY_H:

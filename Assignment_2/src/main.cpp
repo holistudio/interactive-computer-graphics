@@ -431,7 +431,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             }
             case 'c':
             {
-                //TODO: check all vertices if distance matching works (did you reset min distance)
                 float v_dist; 
                 float min_dist = numeric_limits<float>::infinity(); //set to infinity
                 
@@ -702,10 +701,10 @@ int main(void)
     // attributes are stored in a Vertex Buffer Object (or VBO). This means that
     // the VAO is not the actual object storing the vertex data,
     // but the descriptor of the vertex data.
-    //TODO: rename to VAO
-    VertexArrayObject line_VAO;
-    line_VAO.init();
-    line_VAO.bind();
+
+    VertexArrayObject VAO;
+    VAO.init();
+    VAO.bind();
 
     // Initialize the VBO with the vertices data
     // A VBO is a data container that lives in the GPU memory
@@ -772,7 +771,7 @@ int main(void)
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
-        line_VAO.bind();
+        VAO.bind();
 
         // Bind your program
         program.bind();

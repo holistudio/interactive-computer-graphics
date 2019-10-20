@@ -72,18 +72,15 @@ class point
     public:
         float x;
         float y;
-        color rgb;
         point()
         {
             x=0.0;
             y=0.0;
-            rgb= color();
         }
-        point(float x1, float y1, color c1)
+        point(float x1, float y1)
         {
             x = x1;
             y = y1;
-            rgb = c1;
         }
 };
 class triangle
@@ -129,7 +126,7 @@ point screen_to_world(GLFWwindow* window)
 
     xworld = double(screen_pos.coeff(0));
     yworld = double(screen_pos.coeff(1));
-    return point(xworld, yworld, color());
+    return point(xworld, yworld);
 }
 
 bool click_triangle(point click_point, triangle test_triangle)
@@ -377,7 +374,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         triangle test_triangle;
                         for(unsigned k=0; k<3; k++)
                         {
-                            test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1),color()));
+                            test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1)));
                         }
                         if(click_triangle(world_click,test_triangle))
                         {
@@ -392,10 +389,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     //Set vertex colors to blue
                     for(unsigned i = 0; i<3; i++)
                     {
-                        clicked_triangle.v[i].rgb.r = 0.0f;
-                        clicked_triangle.v[i].rgb.g = 0.0f;
-                        clicked_triangle.v[i].rgb.b = 1.0f;
-
                         tri_V.col(clicked_triangle.clicked_index+i).coeffRef(2) = 0.0f;
                         tri_V.col(clicked_triangle.clicked_index+i).coeffRef(3) = 0.0f;
                         tri_V.col(clicked_triangle.clicked_index+i).coeffRef(4) = 1.0f;
@@ -413,7 +406,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     triangle test_triangle;
                     for(unsigned k=0; k<3; k++)
                     {
-                        test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1),color()));
+                        test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1)));
                     }
                     if(click_triangle(world_click,test_triangle))
                     {

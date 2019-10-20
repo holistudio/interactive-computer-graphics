@@ -97,7 +97,6 @@ class triangle
         vector<point> clicked_v;
 };
 
-bool tri_clicked = false;
 int v_clicked = 0;
 
 triangle clicked_triangle;
@@ -242,7 +241,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             }
             break;
         case 'm':
-            if(tri_clicked)
+            if(clicked_triangle.clicked)
             {
                 //set current mouse position to vector mouse_pos
                 Vector2d mouse_pos;
@@ -366,7 +365,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     }
                     tri_VBO.update(tri_V);
 
-                    tri_clicked = false;
+                    clicked_triangle.clicked = false;
                     clicked_triangle.clicked_index = 0;
                     click_count = 0;
                 }
@@ -383,8 +382,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         }
                         if(click_triangle(world_click,test_triangle))
                         {
-                            tri_clicked = true;
                             clicked_triangle = test_triangle;
+                            clicked_triangle.clicked = true;
                             clicked_triangle.clicked_index = i;
                             start_click << world_click.x, world_click.y;
                             clicked_triangle.clicked_v = test_triangle.v;
@@ -546,7 +545,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             default:
                 break;
         }
-        if(tri_clicked)
+        if(clicked_triangle.clicked)
         {
             switch (key)
             {

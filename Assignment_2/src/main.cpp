@@ -436,7 +436,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 float min_dist = numeric_limits<float>::infinity(); //set to infinity
                 
                 //for all vertices in tri_V
-                for(unsigned i=0; i<tri_V.cols()-1; i++)
+                for(unsigned i=0; i<tri_V.cols(); i++)
                 {
                     //calculate distance between mouse click and vertex, v_dist
                     v_dist = (tri_V.col(i).coeff(0) - world_click.x)*(tri_V.col(i).coeff(0) - world_click.x) + (tri_V.col(i).coeff(1) - world_click.y)*(tri_V.col(i).coeff(1) - world_click.y);

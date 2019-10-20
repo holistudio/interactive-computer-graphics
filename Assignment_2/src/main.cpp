@@ -93,14 +93,14 @@ class triangle
         point center;
 
         bool clicked = false;
+        int clicked_index; //start index on tri_V matrix
         vector<point> clicked_v;
 };
 
 bool tri_clicked = false;
-int clicked_index = 0;
 int v_clicked = 0;
-vector<triangle> triangles; //TODO: maybe not necessary. only one triangle needs to be stored, the one that selected. 
 
+triangle clicked_triangle;
 vector<color> colors;
 
 
@@ -194,13 +194,13 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
 
     for(unsigned i = 0; i<new_vertices.size(); i++)
     {
-        triangles[clicked_index].v[i].x = new_vertices[i].coeff(0);
-        triangles[clicked_index].v[i].y = new_vertices[i].coeff(1);
-        tri_V.col(clicked_index*3+i).coeffRef(0) = new_vertices[i].coeff(0);
-        tri_V.col(clicked_index*3+i).coeffRef(1) = new_vertices[i].coeff(1);
+        clicked_triangle.v[i].x = new_vertices[i].coeff(0);
+        clicked_triangle.v[i].y = new_vertices[i].coeff(1);
+        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(0) = new_vertices[i].coeff(0);
+        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(1) = new_vertices[i].coeff(1);
     }
 
-    triangles[clicked_index].clicked_v = triangles[clicked_index].v;
+    clicked_triangle.clicked_v = clicked_triangle.v;
     tri_VBO.update(tri_V);
 
     point world_click = screen_to_world(window);
@@ -252,13 +252,13 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
                 //calculated difference btw start_click and mouse_pos
                 Vector2d tr = mouse_pos - start_click;
                 //translate all vertices of the clicked triangle
-                for(unsigned i = 0; i < triangles[clicked_index].v.size(); i++)
+                for(unsigned i = 0; i < clicked_triangle.v.size(); i++)
                 {
-                    triangles[clicked_index].v[i].x = triangles[clicked_index].clicked_v[i].x + tr.coeffRef(0);
-                    triangles[clicked_index].v[i].y = triangles[clicked_index].clicked_v[i].y + tr.coeffRef(1);
+                    clicked_triangle.v[i].x = clicked_triangle.clicked_v[i].x + tr.coeffRef(0);
+                    clicked_triangle.v[i].y = clicked_triangle.clicked_v[i].y + tr.coeffRef(1);
 
-                    tri_V.col(clicked_index*3+i).coeffRef(0)=triangles[clicked_index].v[i].x;
-                    tri_V.col(clicked_index*3+i).coeffRef(1)=triangles[clicked_index].v[i].y;
+                    tri_V.col(clicked_triangle.clicked_index+i).coeffRef(0)=clicked_triangle.v[i].x;
+                    tri_V.col(clicked_triangle.clicked_index+i).coeffRef(1)=clicked_triangle.v[i].y;
                 }
 
                 //update triangle VBO
@@ -316,23 +316,25 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     case  2:
                     {
                         //add all three click positions to triangle matrix
-                        int insert_start = tri_V.cols()-1;
-                        tri_V.conservativeResize(NoChange ,tri_V.cols()+3);
-                        triangle new_triangle;
-                        point new_vertex;
+
+                        int insert_start;
+                        if(tri_V.cols()==1)
+                        {
+                            insert_start = 0;
+                            tri_V.conservativeResize(NoChange ,tri_V.cols()+2);
+                        }
+                        else
+                        {
+                            insert_start = tri_V.cols();
+                            tri_V.conservativeResize(NoChange ,tri_V.cols()+3);
+                        }
 
                         for(unsigned i=0; i<3; i++)
                         {
                             line_V.col(i).coeffRef(2) = 1.0f;
                             tri_V.col(insert_start+i) << line_V.col(i);
-
-                            new_vertex.x = line_V.col(i).coeffRef(0);
-                            new_vertex.y = line_V.col(i).coeffRef(1);
-                            new_triangle.v.push_back(new_vertex);
                         }
 
-                        triangles.push_back(new_triangle);
-                        cout << tri_V <<endl;
                         //update triangle VBO
                         tri_VBO.update(tri_V);
 
@@ -358,35 +360,36 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 {
                     //reset color to red
                     //TODO: revert to original colors before click
-                    //Set vertex colors to blue
                     for(unsigned i = 0; i<3; i++)
                     {
-                        triangles[clicked_index].v[i].rgb.r = 1.0f;
-                        triangles[clicked_index].v[i].rgb.g = 0.0f;
-                        triangles[clicked_index].v[i].rgb.b = 0.0f;
-
-                        tri_V.col(clicked_index*3+i).coeffRef(2) = 1.0f;
-                        tri_V.col(clicked_index*3+i).coeffRef(3) = 0.0f;
-                        tri_V.col(clicked_index*3+i).coeffRef(4) = 0.0f;
+                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(2) = 1.0f;
+                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(3) = 0.0f;
+                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(4) = 0.0f;
                     }
                     tri_VBO.update(tri_V);
 
                     tri_clicked = false;
-                    clicked_index = 0;
+                    clicked_triangle.clicked_index = 0;
                     click_count = 0;
                 }
                 else
                 {
                     //check if click coordinates is in any triangles
 
-                    for(unsigned i=0; i<triangles.size(); i++)
+                    for(unsigned i=0; i<tri_V.cols(); i+= 3)
                     {
-                        if(click_triangle(world_click,triangles[i]))
+                        triangle test_triangle;
+                        for(unsigned k=0; k<3; k++)
+                        {
+                            test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1),color()));
+                        }
+                        if(click_triangle(world_click,test_triangle))
                         {
                             tri_clicked = true;
-                            clicked_index = i;
+                            clicked_triangle = test_triangle;
+                            clicked_triangle.clicked_index = i;
                             start_click << world_click.x, world_click.y;
-                            triangles[i].clicked_v = triangles[i].v;
+                            clicked_triangle.clicked_v = test_triangle.v;
                             
                             click_count++;
                         }
@@ -394,13 +397,13 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     //Set vertex colors to blue
                     for(unsigned i = 0; i<3; i++)
                     {
-                        triangles[clicked_index].v[i].rgb.r = 0.0f;
-                        triangles[clicked_index].v[i].rgb.g = 0.0f;
-                        triangles[clicked_index].v[i].rgb.b = 1.0f;
+                        clicked_triangle.v[i].rgb.r = 0.0f;
+                        clicked_triangle.v[i].rgb.g = 0.0f;
+                        clicked_triangle.v[i].rgb.b = 1.0f;
 
-                        tri_V.col(clicked_index*3+i).coeffRef(2) = 0.0f;
-                        tri_V.col(clicked_index*3+i).coeffRef(3) = 0.0f;
-                        tri_V.col(clicked_index*3+i).coeffRef(4) = 1.0f;
+                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(2) = 0.0f;
+                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(3) = 0.0f;
+                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(4) = 1.0f;
                     }
                     
                     tri_VBO.update(tri_V);
@@ -410,16 +413,19 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             case 'd':
             {
                 //check if click coordinates is in any triangles
-
-                for(unsigned i=0; i<triangles.size(); i++)
+                for(unsigned i=0; i<tri_V.cols(); i+= 3)
                 {
-                    if(click_triangle(world_click,triangles[i]))
+                    triangle test_triangle;
+                    for(unsigned k=0; k<3; k++)
                     {
-                        triangles.erase(triangles.begin()+i);
-                        removeColumn(tri_V,i*3);
-                        removeColumn(tri_V,i*3);
-                        removeColumn(tri_V,i*3);
-                        i--;
+                        test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1),color()));
+                    }
+                    if(click_triangle(world_click,test_triangle))
+                    {
+                        removeColumn(tri_V,i);
+                        removeColumn(tri_V,i);
+                        removeColumn(tri_V,i);
+                        i=i-3;
                     }
                 }
                 tri_VBO.update(tri_V);
@@ -427,6 +433,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             }
             case 'c':
             {
+                //TODO: check all vertices if distance matching works (did you reset min distance)
                 float v_dist; 
                 float min_dist = numeric_limits<float>::infinity(); //set to infinity
                 
@@ -478,7 +485,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-        // Get the size of the window
+    //TODO: this section is not necessary
+    // Get the size of the window
     int width, height;
     glfwGetWindowSize(window, &width, &height);
     //only perform action on key press, not key release
@@ -556,7 +564,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     float radians = -10 * 3.141592f / 180;
                     Matrix2f rotation;
                     rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
-                    transform_triangle(window, triangles[clicked_index], rotation);
+                    transform_triangle(window, clicked_triangle, rotation);
                     break;
                 }
                 case  GLFW_KEY_J:
@@ -565,21 +573,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     float radians = 10 * 3.141592f / 180;
                     Matrix2f rotation;
                     rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
-                    transform_triangle(window, triangles[clicked_index], rotation);
+                    transform_triangle(window, clicked_triangle, rotation);
                     break;
                 }
                 case  GLFW_KEY_K:
                 {
                     Matrix2f scale;
                     scale << 1.25, 0, 0, 1.25;
-                    transform_triangle(window, triangles[clicked_index], scale);
+                    transform_triangle(window, clicked_triangle, scale);
                     break;
                 }
                 case  GLFW_KEY_L:
                 {
                     Matrix2f scale;
                     scale << 0.75, 0, 0, 0.75;
-                    transform_triangle(window, triangles[clicked_index], scale);
+                    transform_triangle(window, clicked_triangle, scale);
                     break;
                 }
                 default:
@@ -701,13 +709,10 @@ int main(void)
     // attributes are stored in a Vertex Buffer Object (or VBO). This means that
     // the VAO is not the actual object storing the vertex data,
     // but the descriptor of the vertex data.
+    //TODO: rename to VAO
     VertexArrayObject line_VAO;
     line_VAO.init();
     line_VAO.bind();
-
-    // VertexArrayObject tri_VAO;
-    // tri_VAO.init();
-    // tri_VAO.bind();
 
     // Initialize the VBO with the vertices data
     // A VBO is a data container that lives in the GPU memory

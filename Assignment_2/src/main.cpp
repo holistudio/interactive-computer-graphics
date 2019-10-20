@@ -157,7 +157,6 @@ bool click_triangle(point click_point, triangle test_triangle)
             if(alpha < 1 && alpha >0)
             {
                 return true;
-                //TODO: turn all vertices colors blue
             }
             
         }
@@ -278,7 +277,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     // Add mouse click coordinates to V if the left button is pressed
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
-        //TODO: switch on a mode string variable
         switch (mode)
         {
             case 'i':
@@ -485,14 +483,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    //TODO: this section is not necessary
-    // Get the size of the window
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
     //only perform action on key press, not key release
     if(action == GLFW_PRESS)
     {
-        //TODO: re-organize switch and boolean if statements
         switch (key)
         {
             case  GLFW_KEY_I:

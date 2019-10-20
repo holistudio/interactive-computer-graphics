@@ -192,9 +192,13 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
         clicked_triangle.v[i].y = new_vertices[i].coeff(1);
         tri_V.col(clicked_triangle.clicked_index+i).coeffRef(0) = new_vertices[i].coeff(0);
         tri_V.col(clicked_triangle.clicked_index+i).coeffRef(1) = new_vertices[i].coeff(1);
+        line_V.col(i) << tri_V.col(clicked_triangle.clicked_index+i).coeff(0),
+                                        tri_V.col(clicked_triangle.clicked_index+i).coeff(1), 
+                                        1.0,1.0,1.0;
     }
 
     tri_VBO.update(tri_V);
+    line_VBO.update(line_V);
 
     point world_click = screen_to_world(window);
     start_click << world_click.x, world_click.y;
@@ -227,7 +231,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             {
 
                 //set line matrix column to mouse cursor position
-                line_V.col(click_count) << world_click.x, world_click.y , 0.0f, 0.0f, 0.0f;
+                line_V.col(click_count) << world_click.x, world_click.y , 1.0f, 1.0f, 1.0f;
 
                 //update VBO
                 line_VBO.update(line_V);
@@ -252,10 +256,14 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
                 {
                     tri_V.col(clicked_triangle.clicked_index+i).coeffRef(0)=clicked_triangle.v[i].x + tr.coeffRef(0);;
                     tri_V.col(clicked_triangle.clicked_index+i).coeffRef(1)=clicked_triangle.v[i].y + tr.coeffRef(1);
+                    line_V.col(i) << tri_V.col(clicked_triangle.clicked_index+i).coeff(0),
+                                        tri_V.col(clicked_triangle.clicked_index+i).coeff(1), 
+                                        1.0,1.0,1.0;
                 }
 
                 //update triangle VBO
                 tri_VBO.update(tri_V);
+                line_VBO.update(line_V);
             }
             break;
         }
@@ -269,7 +277,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
     point world_click = screen_to_world(window);
 
-    // Add mouse click coordinates to V if the left button is pressed
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
         switch (mode)
@@ -284,7 +291,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     case  0:
                     {
                         //if it's the first click set first column of line matrix to click position
-                        line_V.col(click_count) << world_click.x, world_click.y, 0.0f, 0.0f, 0.0f;
+                        line_V.col(click_count) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;
                         click_count = click_count+1;
                         mouse_move=false;
                         break;
@@ -294,10 +301,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         //on the second click, add click position to line matrix
                         //then draw a line strip using the following line matrix
                         //first click, second click, wherever the mouse cursor is, and first click
-                        line_V.col(click_count) << world_click.x, world_click.y, 0.0f, 0.0f, 0.0f;
+                        line_V.col(click_count) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;
                         
                         //third vertex in matrix starts as the same as second vertex as a placeholder
-                        line_V.col(line_V.cols()-1) << world_click.x, world_click.y, 0.0f, 0.0f, 0.0f;;
+                        line_V.col(line_V.cols()-1) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;;
 
                         line_V.conservativeResize(NoChange ,line_V.cols()+1);
 
@@ -325,6 +332,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         for(unsigned i=0; i<3; i++)
                         {
                             line_V.col(i).coeffRef(2) = 1.0f;
+                            line_V.col(i).coeffRef(3) = 0.0f;
+                            line_V.col(i).coeffRef(4) = 0.0f;
                             tri_V.col(insert_start+i) << line_V.col(i);
                         }
 
@@ -351,16 +360,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             {
                 if(click_count>0)
                 {
-                    //reset color to red
-                    //TODO: revert to original colors before click
-                    for(unsigned i = 0; i<3; i++)
-                    {
-                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(2) = 1.0f;
-                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(3) = 0.0f;
-                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(4) = 0.0f;
-                    }
-                    tri_VBO.update(tri_V);
-
+                    removeColumn(line_V,0);
+                    removeColumn(line_V,0);
+                    removeColumn(line_V,0);
+                    line_VBO.update(line_V);
                     clicked_triangle.clicked = false;
                     clicked_triangle.clicked_index = 0;
                     click_count = 0;
@@ -386,14 +389,15 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                             click_count++;
                         }
                     }
-                    //Set vertex colors to blue
+                    line_V.resize(5,3);
+
                     for(unsigned i = 0; i<3; i++)
                     {
-                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(2) = 0.0f;
-                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(3) = 0.0f;
-                        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(4) = 1.0f;
+                        line_V.col(i) << tri_V.col(clicked_triangle.clicked_index+i).coeff(0),
+                                        tri_V.col(clicked_triangle.clicked_index+i).coeff(1), 
+                                        1.0,1.0,1.0;
                     }
-                    
+                    line_VBO.update(line_V);
                     tri_VBO.update(tri_V);
                 }
                 break;
@@ -774,7 +778,7 @@ int main(void)
         glUniform2fv(program.uniform("translation"),1, view_pos.data());
         
         // Clear the framebuffer
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
 
@@ -794,6 +798,25 @@ int main(void)
             }
         }
 
+        //if triangle is selected
+        if(mode == 'm')
+        {
+            if(clicked_triangle.clicked)
+            {
+                line_VBO.bind();
+
+                glEnableVertexAttribArray(0);
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (const GLvoid *)8);
+
+                glEnableVertexAttribArray(1);
+                glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
+                if(click_count>0)
+                {
+                    glDrawArrays(GL_LINE_LOOP,0,line_V.cols());
+                }
+            }
+            
+        }
         
         //if a line is being drawn
         if(mode == 'i')

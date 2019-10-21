@@ -53,7 +53,7 @@ Colors are automatically interpolated between vertices by OpenGL.
 At any time during the program, 'w' 'a' 's' 'd' keys can shift the view **camera's position**, while '+'/'-' keys zoom in and out of the scene. This is done via shader uniform variables, rather than direct manipulation of vertices coordinates of objects in the scene.
 
 <div>
-<img src="img/task1-4_0a.png" width="100"> <img src="img/task1-4_1w.png" width="100"> <img src="img/task1-4_2d.png" width="100"> <img src="img/task1-4_3s.png" width="100"> </div>
+<img src="img/task1-4_0a.png" width="150"> <img src="img/task1-4_1w.png" width="150"> <img src="img/task1-4_2d.png" width="150"> <img src="img/task1-4_3s.png" width="150"> </div>
 
 Keys 'a' 'w' 'd' 's' pressed in that order.
 

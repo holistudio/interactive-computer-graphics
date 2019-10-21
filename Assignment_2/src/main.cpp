@@ -287,11 +287,15 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         {
             case 'i':
             {
-                cout << line_V << endl;
-                cout << "---" << endl;
-                cout << tri_V<< endl;
                 //at every click expand the line matrix by one column
-                line_V.conservativeResize(NoChange ,line_V.cols()+1);
+                if(line_V.cols()>0)
+                {
+                    line_V.conservativeResize(5 ,line_V.cols()+1);
+                }
+                else{
+                    line_V.conservativeResize(5 ,line_V.cols()+2);
+                }
+                
 
                 switch (click_count)
                 {

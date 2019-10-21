@@ -35,7 +35,7 @@ Eigen::MatrixXf tri_V(5,1);
 Eigen::MatrixXf anim_tri_V(5,1);
 int num_anim_V=0;
 int num_keyframes = 0;
-float time_step = 1.0;
+float time_step = 1.0; //time step between animation key frames
 chrono::time_point<chrono::high_resolution_clock> t_start;
 
 Matrix2f view_scale;
@@ -287,6 +287,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         {
             case 'i':
             {
+                cout << line_V << endl;
+                cout << "---" << endl;
+                cout << tri_V<< endl;
                 //at every click expand the line matrix by one column
                 line_V.conservativeResize(NoChange ,line_V.cols()+1);
 
@@ -551,6 +554,67 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             default:
                 break;
         }
+        if(animation_mode)
+        {
+            if(mode == 'p')
+            {
+                anim_tri_V = MatrixXf::Zero(5,1);
+                num_keyframes = 0;
+                
+                mode='m';
+                std::cout << "Animation ended. All keyframes cleared" << std::endl;
+                click_count = 0;
+                std::cout << "Triangle Move Mode" << std::endl;
+                animation_mode = false;
+            }
+            else
+            {
+                switch (key)
+                {
+                    case  GLFW_KEY_PERIOD:
+                    {
+                        click_count=0;
+                        if(num_keyframes == 0)
+                        {
+                            //the first time period is clicked, the first animation key frame is added
+                            //number of columns in tri_V should be stored
+                            num_anim_V = tri_V.cols();
+                            anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V-1);
+                        }
+                        else
+                        {
+                            anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
+                        }
+                        //store tri_V into anim_tri_V
+                        for(unsigned i=0; i<num_anim_V; i++)
+                        {
+                            anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
+                        }
+                        num_keyframes++;
+                        cout << "---" << endl;
+                        cout << "Set up keyframe " << num_keyframes+1 << endl;
+                        cout << "Move/Rotate/Scale/Change Vertex Colors Only. DO NOT ADD TRIANGLES TO SCENE." << endl;
+                        cout << "Press the '.' key to add current scene as a keyframe and continue adding key frames." << endl;
+                        cout << "Press the '/' key to add current scene as a keyframe and finish the animation setup." << endl;
+                        break;
+                    }
+                    case  GLFW_KEY_SLASH:
+                        mode = 'p';
+                        anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
+                        //store tri_V into anim_tri_V
+                        for(unsigned i=0; i<num_anim_V; i++)
+                        {
+                            anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
+                        }
+                        num_keyframes++;
+                        // Save the current time
+                        t_start = std::chrono::high_resolution_clock::now();
+                        break;
+                    default: 
+                        break;
+                }
+            }
+        }
         if(clicked_triangle.clicked)
         {
             point world_click = screen_to_world(window);
@@ -639,66 +703,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 tri_VBO.update(tri_V);
             }
         }
-        if(animation_mode)
-        {
-            if(mode == 'p')
-            {
-                anim_tri_V.resize(5,1);
-                num_keyframes = 0;
-                
-                mode='m';
-                std::cout << "Animation ended. All keyframes cleared" << std::endl;
-                click_count = 0;
-                std::cout << "Triangle Move Mode" << std::endl;
-                animation_mode = false;
-            }
-            else
-            {
-                switch (key)
-                {
-                    case  GLFW_KEY_PERIOD:
-                        if(num_keyframes == 0)
-                        {
-                            //the first time period is clicked, the first animation key frame is added
-                            //number of columns in tri_V should be stored
-                            num_anim_V = tri_V.cols();
-                            anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V-1);
-                        }
-                        else
-                        {
-                            anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
-                        }
-                        //store tri_V into anim_tri_V
-                        for(unsigned i=0; i<num_anim_V; i++)
-                        {
-                            anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
-                        }
-                        num_keyframes++;
-                        cout << "---" << endl;
-                        cout << "Set up keyframe " << num_keyframes+1 << endl;
-                        cout << "Move/Rotate/Scale/Change Vertex Colors Only. DO NOT ADD TRIANGLES TO SCENE." << endl;
-                        cout << "Press the '.' key to add current scene as a keyframe and continue adding key frames." << endl;
-                        cout << "Press the '/' key to add current scene as a keyframe and finish the animation setup." << endl;
-                        break;
-                    case  GLFW_KEY_SLASH:
-                        mode = 'p';
-                        anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
-                        //store tri_V into anim_tri_V
-                        for(unsigned i=0; i<num_anim_V; i++)
-                        {
-                            anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
-                        }
-                        num_keyframes++;
-                        //TODO: prompt user for animation time step
 
-                        // Save the current time
-                        t_start = std::chrono::high_resolution_clock::now();
-                        break;
-                    default: 
-                        break;
-                }
-            }
-        }
     }
 }
 

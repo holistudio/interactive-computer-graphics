@@ -32,15 +32,19 @@ VertexBufferObject tri_VBO;
 Eigen::MatrixXf line_V(5,1);
 Eigen::MatrixXf tri_V(5,1);
 
+Eigen::MatrixXf anim_tri_V(5,1);
+int num_anim_V=0;
+int num_keyframes = 0;
+float time_step = 1.0;
+chrono::time_point<chrono::high_resolution_clock> t_start;
+
 Matrix2f view_scale;
 Vector2f view_pos;
 
-// bool tri_first = true;
-// bool tri_complete = false;
 char mode = ' ';
+bool animation_mode = false;
 
 int click_count = 0;
-int num_triangles = 0;
 bool mouse_move = false;
 
 Vector2d start_click;
@@ -340,9 +344,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         //update triangle VBO
                         tri_VBO.update(tri_V);
 
-                        //increment triangle count
-                        num_triangles++;
-
                         //clear line matrix
                         line_V = MatrixXf::Zero(5,1);
                         //reset click count
@@ -479,6 +480,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     //only perform action on key press, not key release
     if(action == GLFW_PRESS)
     {
+
         switch (key)
         {
             case  GLFW_KEY_I:
@@ -500,6 +502,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 mode = 'c';
                 click_count = 0; 
                 std::cout << "Vertex Color Mode" << std::endl;
+                break;
+            case  GLFW_KEY_M:
+                animation_mode = true;
+                click_count = 0;
+                cout << "Animation Mode" << endl;
+                cout << "Set up keyframe " << num_keyframes+1 << endl;
+                cout << "Draw first key frame of triangles." << endl; 
+                cout << "Note that you cannot add triangles after setting up first key frame"<< endl;
+                cout << "Press the '.' key when done" << endl;
                 break;
             case  GLFW_KEY_EQUAL: //TODO: see if you can combine this with SHIFT key so it's actually '+' sign
                 view_scale = view_scale + 0.2*MatrixXf::Identity(2,2);
@@ -628,6 +639,66 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 tri_VBO.update(tri_V);
             }
         }
+        if(animation_mode)
+        {
+            if(mode == 'p')
+            {
+                anim_tri_V.resize(5,1);
+                num_keyframes = 0;
+                
+                mode='m';
+                std::cout << "Animation ended. All keyframes cleared" << std::endl;
+                click_count = 0;
+                std::cout << "Triangle Move Mode" << std::endl;
+                animation_mode = false;
+            }
+            else
+            {
+                switch (key)
+                {
+                    case  GLFW_KEY_PERIOD:
+                        if(num_keyframes == 0)
+                        {
+                            //the first time period is clicked, the first animation key frame is added
+                            //number of columns in tri_V should be stored
+                            num_anim_V = tri_V.cols();
+                            anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V-1);
+                        }
+                        else
+                        {
+                            anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
+                        }
+                        //store tri_V into anim_tri_V
+                        for(unsigned i=0; i<num_anim_V; i++)
+                        {
+                            anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
+                        }
+                        num_keyframes++;
+                        cout << "---" << endl;
+                        cout << "Set up keyframe " << num_keyframes+1 << endl;
+                        cout << "Move/Rotate/Scale/Change Vertex Colors Only. DO NOT ADD TRIANGLES TO SCENE." << endl;
+                        cout << "Press the '.' key to add current scene as a keyframe and continue adding key frames." << endl;
+                        cout << "Press the '/' key to add current scene as a keyframe and finish the animation setup." << endl;
+                        break;
+                    case  GLFW_KEY_SLASH:
+                        mode = 'p';
+                        anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
+                        //store tri_V into anim_tri_V
+                        for(unsigned i=0; i<num_anim_V; i++)
+                        {
+                            anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
+                        }
+                        num_keyframes++;
+                        //TODO: prompt user for animation time step
+
+                        // Save the current time
+                        t_start = std::chrono::high_resolution_clock::now();
+                        break;
+                    default: 
+                        break;
+                }
+            }
+        }
     }
 }
 
@@ -745,13 +816,7 @@ int main(void)
     program.init(vertex_shader,fragment_shader,"fragmentColor");
     program.bind();
 
-    // The vertex shader wants the position of the vertices as an input.
-    // The following line connects the VBO we defined above with the position "slot"
-    // in the vertex shader
-    //program.bindVertexAttribArray("position",line_VBO);
 
-    // Save the current time --- it will be used to dynamically change the triangle color
-    auto t_start = std::chrono::high_resolution_clock::now();
 
     // Register the keyboard callback
     glfwSetKeyCallback(window, key_callback);
@@ -840,6 +905,29 @@ int main(void)
                 }   
             }
             
+        }
+
+        if(mode == 'p')
+        {
+            //animation of key frames
+            auto t_now = std::chrono::high_resolution_clock::now();
+            float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
+
+            if(time > 0)
+            {
+                int k_0 = floor(time / time_step)*num_anim_V;
+                int k_1 = ceil(time / time_step)*num_anim_V;
+                if(ceil(time/time_step)<num_keyframes)
+                {
+                    for(unsigned i=0; i<tri_V.cols(); i++)
+                    {
+                        tri_V.col(i) = anim_tri_V.col(k_0+i)+(anim_tri_V.col(k_1+i)-anim_tri_V.col(k_0+i))*(time-floor(time / time_step));
+                    }
+                    tri_VBO.update(tri_V);
+                }
+            }
+
+
         }
 
         // Swap front and back buffers

@@ -925,6 +925,11 @@ int main(void)
                     }
                     tri_VBO.update(tri_V);
                 }
+                else
+                {
+                    t_start = t_now;
+                }
+                
             }
 
 

@@ -465,7 +465,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 break;
         }
     }
-    // The follow commented out section of code is meant only for Task 1.1
+    // The following commented out section of code is meant only for Task 1.1
     // where releasing the left mouse button "releases" the clicked triangle.
     // For Task 1.2 onwards, the triangle remains "selected" after mouse button release
     // to allow for rotation and scaling
@@ -744,7 +744,7 @@ int main(void)
     #endif
 
     // Create a windowed mode window and its OpenGL context
-    window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
+    window = glfwCreateWindow(640, 480, "Triangles!", NULL, NULL);
     if (!window)
     {
         glfwTerminate();

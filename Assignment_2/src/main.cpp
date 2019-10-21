@@ -538,7 +538,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 view_pos = view_pos - (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
                 break;
             case  GLFW_KEY_T:
-                //insert triangles for testing view scaling and translation
+                //populate the screenw with triangles for testing view scaling and translation for Task 1.4
 
                 //with no initial zoom or translation,
                 //white triangle tip will touch the screen edge after pressing 'S' key once, 
@@ -547,6 +547,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 //with no initial zoom or translation,
                 //red triangle tip will touch screen edge after pressing '+' key once and 'S' key once
                 //demonstrating that the view is *consistently* translated 20% of screen height
+                //regardless of zoom
                 tri_V.conservativeResize(5,6);
                 tri_V << 0, 0.5, -0.5, 0, 0.5, -0.5,
                         0.6,  0, 0, 0.5, 0, 0,

@@ -541,7 +541,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 //insert triangles for testing view scaling and translation
 
                 //with no initial zoom or translation,
-                //black triangle tip will touch the screen edge after pressing 'S' key once, 
+                //white triangle tip will touch the screen edge after pressing 'S' key once, 
                 //demonstrating that the view is translated 20% of screen height
 
                 //with no initial zoom or translation,
@@ -550,9 +550,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 tri_V.conservativeResize(5,6);
                 tri_V << 0, 0.5, -0.5, 0, 0.5, -0.5,
                         0.6,  0, 0, 0.5, 0, 0,
-                        0.0, 0.0, 0.0, 1.0, 1.0, 1.0,
-                        0, 0, 0, 0, 0, 0,
-                        0, 0, 0, 0, 0, 0;
+                        1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+                        1.0, 1.0, 1.0, 0, 0, 0,
+                        1.0, 1.0, 1.0, 0, 0, 0;
                 tri_VBO.update(tri_V);
                 break;
             default:
@@ -629,7 +629,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 case  GLFW_KEY_H:
                 {
                     //rotation matrix
-                    float radians = -10 * 3.141592f / 180;
+                    float radians = 10 * 3.141592f / 180;
                     Matrix2f rotation;
                     rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
                     transform_triangle(window, clicked_triangle, rotation);
@@ -638,7 +638,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 case  GLFW_KEY_J:
                 {
                     //rotation matrix
-                    float radians = 10 * 3.141592f / 180;
+                    float radians = -10 * 3.141592f / 180;
                     Matrix2f rotation;
                     rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
                     transform_triangle(window, clicked_triangle, rotation);

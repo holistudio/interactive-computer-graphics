@@ -17,10 +17,7 @@
 #include <Eigen/Core>
 using namespace Eigen;
 using namespace std;
-
-// Timer
 #include <chrono>
-
 #include <iostream>
 #include <limits>
 
@@ -28,27 +25,35 @@ using namespace std;
 VertexBufferObject line_VBO;
 VertexBufferObject tri_VBO;
 
-// Contains the vertex positions
+// Contains the vertex positions of the linse and triangles
 Eigen::MatrixXf line_V(5,1);
 Eigen::MatrixXf tri_V(5,1);
 
-Eigen::MatrixXf anim_tri_V(5,1);
-int num_anim_V=0;
-int num_keyframes = 0;
-float time_step = 1.0; //time step between animation key frames
-chrono::time_point<chrono::high_resolution_clock> t_start;
-
-Matrix2f view_scale;
-Vector2f view_pos;
-
+// variables for tracking which mode the drawing application is in
 char mode = ' ';
 bool animation_mode = false;
 
+// variables for tracking mouse states
+Vector2d start_click;
 int click_count = 0;
 bool mouse_move = false;
 
-Vector2d start_click;
+//View control variables that link to shader uniforms
+Matrix2f view_scale;
+Vector2f view_pos;
 
+// Container for tracking the triangle vertex positions and colors at each key frame of an animation
+Eigen::MatrixXf anim_tri_V(5,1);
+// Number of triangle vertices throughout the animation
+int num_anim_V=0;
+// Number of animation keyframes
+int num_keyframes = 0;
+// Time step between animation key frames
+float time_step = 1.0; 
+// Variable for recording when the animation starts
+chrono::time_point<chrono::high_resolution_clock> t_start;
+
+// Color, Point, and Triangle Classes for easier-to-read code
 class color
 {
     public:
@@ -58,7 +63,7 @@ class color
         float b;
         color()
         {
-            r = 0.0;
+            r = 0.0; //values between 0 and 1 for convenient use with OpenGL shaders
             g = 0.0;
             b = 0.0;
         }
@@ -87,19 +92,24 @@ class point
             y = y1;
         }
 };
+
 class triangle
 {
     public:
         vector<point> v; //vector of vertices
-        point center;
-
-        bool clicked = false;
+        bool clicked = false; // tracks whether there is a triangle selected on the screen or not
         int clicked_index; //start index on tri_V matrix
 };
 
+
+
+// global variable for storing the clicked triangle's properties
+triangle clicked_triangle;
+
+// global variable for storing the clicked vertex's index position in tri_V
 int v_clicked = 0;
 
-triangle clicked_triangle;
+// vector of colors for shading vertices in Task 1.3
 vector<color> colors;
 
 
@@ -110,12 +120,15 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 point screen_to_world(GLFWwindow* window)
 {
+    // Given the mouse's screen coordinates
+    // the corresponding point in world coordinates is returned
+    // accounting for screen size and view controls
+
     // Get the position of the mouse in the window
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
 
-    Matrix2f inv_scale;
-    inv_scale << 1/view_scale.coeff(0,0),0,0,1/view_scale.coeff(1,1);
+
 
     // Get the size of the window
     int width, height;
@@ -124,17 +137,25 @@ point screen_to_world(GLFWwindow* window)
     double xworld = ((xpos/double(width))*2)-1;
     double yworld = (((height-1-ypos)/double(height))*2)-1; 
 
-    Vector2f screen_pos;
-    screen_pos << float(xworld), float(yworld);
-    screen_pos = inv_scale * screen_pos - view_pos;
+    // adjust position accounting for view controls
+    Matrix2f inv_scale;
+    inv_scale << 1/view_scale.coeff(0,0),0,0,1/view_scale.coeff(1,1);
+    
+    Vector2f adj_pos;
+    adj_pos << float(xworld), float(yworld);
+    adj_pos = inv_scale * adj_pos - view_pos;
 
-    xworld = double(screen_pos.coeff(0));
-    yworld = double(screen_pos.coeff(1));
+    xworld = double(adj_pos.coeff(0));
+    yworld = double(adj_pos.coeff(1));
     return point(xworld, yworld);
 }
 
 bool click_triangle(point click_point, triangle test_triangle)
 {
+    // Given a click point and a triangle
+    // return whether click point is inside triangle
+    // using barycentric coordinates
+
     point a = test_triangle.v[0];
     point b = test_triangle.v[1];
     point c = test_triangle.v[2];
@@ -165,7 +186,11 @@ bool click_triangle(point click_point, triangle test_triangle)
 
 void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f transform)
 {
+    // Given a triangle and a transformation matrix,
+    // compute transformed coordinates of its vertices
+
     vector<Vector2f> new_vertices;
+
     //find barycentric center, referencing the current rendered positions of the triangles
     Vector2f v1 = Vector2f(tri_V.col(sel_triangle.clicked_index).coeff(0),tri_V.col(sel_triangle.clicked_index).coeff(1));
     Vector2f v2 = Vector2f(tri_V.col(sel_triangle.clicked_index+1).coeff(0),tri_V.col(sel_triangle.clicked_index+1).coeff(1));
@@ -190,6 +215,9 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
     new_vertices.push_back(v2);
     new_vertices.push_back(v3);
 
+    // update matrices and VBOs
+    // line vertices and VBO are also updated
+    // given the transformed triangle is selected with a white border
     for(unsigned i = 0; i<new_vertices.size(); i++)
     {
         clicked_triangle.v[i].x = new_vertices[i].coeff(0);
@@ -204,14 +232,15 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
     tri_VBO.update(tri_V);
     line_VBO.update(line_V);
 
+    // update starting position of the triangle to where the current mouse cursor is
     point world_click = screen_to_world(window);
     start_click << world_click.x, world_click.y;
 }
 
 void removeColumn(MatrixXf& matrix, unsigned int colToRemove)
 {
-    //Eigen matrix column remover function courtesy of https://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
-    //Thank the gods for StackOverflow
+    // Eigen matrix column remover function courtesy of https://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
+    // Thank the gods for StackOverflow
     unsigned int numRows = matrix.rows();
     unsigned int numCols = matrix.cols()-1;
 
@@ -223,10 +252,12 @@ void removeColumn(MatrixXf& matrix, unsigned int colToRemove)
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    // Get mouse cursor position
     point world_click = screen_to_world(window);
 
     switch (mode)
     {
+        // Triangle Insert Mode
         case 'i':
         {
             //after the first click, draw a segment from first click to wherever the mouse cursor is
@@ -245,8 +276,10 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
             }
             break;
         }
+        // Triangle Move/Rotation/Scale Mode
         case 'm':
         {
+            // if a triangle has been clicked/selected
             if(clicked_triangle.clicked)
             {
                 //set current mouse position to vector mouse_pos
@@ -279,29 +312,35 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
+    // Get mouse cursor position
     point world_click = screen_to_world(window);
 
+    // When left mouse button is pressed
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
         switch (mode)
         {
+            // Triangle Insert Mode
             case 'i':
             {
-                //at every click expand the line matrix by one column
+                // at every click expand the line matrix by one column
                 if(line_V.cols()>0)
                 {
                     line_V.conservativeResize(5 ,line_V.cols()+1);
                 }
-                else{
+                else
+                {
+                    // except in the case where all triangles were previously deleted from the scene
+                    // leading to line_V becoming an empty variable
+                    // in that case, line_V needs to start with 2 columns
                     line_V.conservativeResize(5 ,line_V.cols()+2);
                 }
                 
-
                 switch (click_count)
                 {
                     case  0:
                     {
-                        //if it's the first click set first column of line matrix to click position
+                        // if it's the first click set first column of line matrix to click position
                         line_V.col(click_count) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;
                         click_count = click_count+1;
                         mouse_move=false;
@@ -309,25 +348,26 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     }
                     case  1:
                     {
-                        //on the second click, add click position to line matrix
-                        //then draw a line strip using the following line matrix
-                        //first click, second click, wherever the mouse cursor is, and first click
+                        // on the second click, add click position to line matrix
+                        // then draw a line strip using the following line matrix
+                        // first click, second click, wherever the mouse cursor is, and first click
                         line_V.col(click_count) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;
                         
                         //third vertex in matrix starts as the same as second vertex as a placeholder
-                        line_V.col(line_V.cols()-1) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;;
+                        line_V.col(line_V.cols()-1) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;
 
-                        line_V.conservativeResize(NoChange ,line_V.cols()+1);
-
-                        //last vertex of line strip is same as first vertex of line strip (to just preview the triangle not draw one)
+                        // last vertex of line strip is same as first vertex of line strip (to just preview the triangle not draw one)
+                        line_V.conservativeResize(NoChange ,line_V.cols()+1); // requires a 4th column
                         line_V.col(line_V.cols()-1) << line_V.col(0);
                         click_count++;
                         break;
                     }
                     case  2:
                     {
-                        //add all three click positions to triangle matrix
+                        // add all three click positions to triangle matrix
 
+                        // depending on how many columns are in the tri_V matrix
+                        // resize so there's 3 extra columns to add new triangle
                         int insert_start;
                         if(tri_V.cols()==1)
                         {
@@ -340,6 +380,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                             tri_V.conservativeResize(NoChange ,tri_V.cols()+3);
                         }
 
+                        // new red triangle
                         for(unsigned i=0; i<3; i++)
                         {
                             line_V.col(i).coeffRef(2) = 1.0f;
@@ -366,12 +407,17 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             }
             case 'm':
             {
+                // after a triangle has been selected,
+                // an additional click "deslects" the triangle
                 if(click_count>0)
                 {
+                    // remove line border around selected triangle
                     removeColumn(line_V,0);
                     removeColumn(line_V,0);
                     removeColumn(line_V,0);
                     line_VBO.update(line_V);
+
+                    // reset appropriate variables
                     clicked_triangle.clicked = false;
                     clicked_triangle.clicked_index = 0;
                     click_count = 0;
@@ -379,24 +425,29 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 else
                 {
                     //check if click coordinates is in any triangles
-
                     for(unsigned i=0; i<tri_V.cols(); i+= 3)
                     {
+                        // assemble instance of triangle
                         triangle test_triangle;
                         for(unsigned k=0; k<3; k++)
                         {
                             test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1)));
                         }
+
                         if(click_triangle(world_click,test_triangle))
                         {
                             clicked_triangle = test_triangle;
                             clicked_triangle.clicked = true;
                             clicked_triangle.clicked_index = i;
+
+                            // to have the selected triangle move with the mouse
+                            // record mouse click position
                             start_click << world_click.x, world_click.y;
-                            
                             click_count++;
                         }
                     }
+
+                    //prepare line VBO for drawing a white border around selected triangle
                     line_V.resize(5,3);
 
                     for(unsigned i = 0; i<3; i++)

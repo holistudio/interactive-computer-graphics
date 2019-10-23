@@ -577,21 +577,27 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
             case  GLFW_KEY_EQUAL:
                 view_scale = view_scale + 0.2*MatrixXf::Identity(2,2);
+                click_count = 0;
                 break;
             case  GLFW_KEY_MINUS:
                 view_scale = view_scale - 0.2*MatrixXf::Identity(2,2);
+                click_count = 0;
                 break;
             case  GLFW_KEY_W:
                 view_pos = view_pos - (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
+                click_count = 0;
                 break;
             case  GLFW_KEY_S:
                 view_pos = view_pos + (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
+                click_count = 0;
                 break;
             case  GLFW_KEY_A:
                 view_pos = view_pos + (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
+                click_count = 0;
                 break;
             case  GLFW_KEY_D:
                 view_pos = view_pos - (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
+                click_count = 0;
                 break;
             case  GLFW_KEY_T:
                 //populate the screen with triangles for testing view scaling and translation for Task 1.4
@@ -611,11 +617,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                         1.0, 1.0, 1.0, 0, 0, 0,
                         1.0, 1.0, 1.0, 0, 0, 0;
                 tri_VBO.update(tri_V);
+                click_count = 0;
                 break;
             default:
                 break;
         }
-
+        
         // animation mode
         if(animation_mode)
         {

@@ -475,6 +475,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     {
                         test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1)));
                     }
+
+                    //delete vertex columns if click is inside triangle
                     if(click_triangle(world_click,test_triangle))
                     {
                         removeColumn(tri_V,i);
@@ -488,7 +490,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             }
             case 'c':
             {
-                float v_dist; 
+                float v_dist;  // distance from click to vertex
                 float min_dist = numeric_limits<float>::infinity(); //set to infinity
                 
                 //for all vertices in tri_V
@@ -542,7 +544,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     //only perform action on key press, not key release
     if(action == GLFW_PRESS)
     {
-
         switch (key)
         {
             case  GLFW_KEY_I:
@@ -568,13 +569,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case  GLFW_KEY_M:
                 animation_mode = true;
                 click_count = 0;
-                cout << "Animation Mode" << endl;
+                cout << "*** Animation Mode ***" << endl;
                 cout << "Set up keyframe " << num_keyframes+1 << endl;
-                cout << "Draw first key frame of triangles." << endl; 
-                cout << "Note that you cannot add triangles after setting up first key frame"<< endl;
+                cout << "Draw first keyframe of triangles." << endl; 
+                cout << "Note that you CANNOT ADD triangles after setting up first keyframe"<< endl;
                 cout << "Press the '.' key when done" << endl;
                 break;
-            case  GLFW_KEY_EQUAL: //TODO: see if you can combine this with SHIFT key so it's actually '+' sign
+            case  GLFW_KEY_EQUAL:
                 view_scale = view_scale + 0.2*MatrixXf::Identity(2,2);
                 break;
             case  GLFW_KEY_MINUS:
@@ -593,7 +594,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 view_pos = view_pos - (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
                 break;
             case  GLFW_KEY_T:
-                //populate the screenw with triangles for testing view scaling and translation for Task 1.4
+                //populate the screen with triangles for testing view scaling and translation for Task 1.4
 
                 //with no initial zoom or translation,
                 //white triangle tip will touch the screen edge after pressing 'S' key once, 
@@ -614,18 +615,25 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             default:
                 break;
         }
+
+        // animation mode
         if(animation_mode)
         {
+            // if animation is playing and another key has been pressed.
             if(mode == 'p')
             {
+                // stop the animation
+                animation_mode = false;
+
+                // clear animation keyframes
                 anim_tri_V = MatrixXf::Zero(5,1);
                 num_keyframes = 0;
-                
-                mode='m';
                 std::cout << "Animation ended. All keyframes cleared" << std::endl;
+
+                // set mode to triangle translation mode
+                mode='m';
                 click_count = 0;
                 std::cout << "Triangle Move Mode" << std::endl;
-                animation_mode = false;
             }
             else
             {
@@ -651,35 +659,44 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                             anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
                         }
                         num_keyframes++;
-                        cout << "---" << endl;
+                        cout << "------" << endl;
                         cout << "Set up keyframe " << num_keyframes+1 << endl;
                         cout << "Move/Rotate/Scale/Change Vertex Colors Only. DO NOT ADD TRIANGLES TO SCENE." << endl;
                         cout << "Press the '.' key to add current scene as a keyframe and continue adding key frames." << endl;
-                        cout << "Press the '/' key to add current scene as a keyframe and finish the animation setup." << endl;
+                        cout << "Press the '/' key to add current scene as last keyframe and play the animation!" << endl;
                         break;
                     }
                     case  GLFW_KEY_SLASH:
-                        mode = 'p';
+                        cout << "*** Animation Now Playing! ***" << endl;
+                        
+                        //store last keyframe tri_V into anim_tri_V
                         anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
-                        //store tri_V into anim_tri_V
                         for(unsigned i=0; i<num_anim_V; i++)
                         {
                             anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
                         }
                         num_keyframes++;
-                        // Save the current time
+
+                        // Store the current time for tracking animation time
                         t_start = std::chrono::high_resolution_clock::now();
+
+                        // change application mode
+                        mode = 'p';
                         break;
                     default: 
                         break;
                 }
             }
         }
+
+        
         if(clicked_triangle.clicked)
         {
+            // store current mouse position for calculating triangle's translation to follow mouse
             point world_click = screen_to_world(window);
             start_click << double(world_click.x), double(world_click.y);
 
+            // if triangle is clicked, additional key presses can rotate/scale selected triangle
             switch (key)
             {
                 case  GLFW_KEY_H:
@@ -718,6 +735,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     break;
             }
         }
+
+        // in vertex color mode, additional keys change vertex color
         if(mode=='c')
         {
             if(click_count>0)
@@ -769,6 +788,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 int main(void)
 {
+    // add color palette to colors vector
     colors.push_back(color(0.0f,0.0f,1.0f));
     colors.push_back(color(0.0f,float(195./255.),1.0f));
     colors.push_back(color(0.0f,1.0f,float(187./255.)));
@@ -830,17 +850,11 @@ int main(void)
     printf("Supported GLSL is %s\n", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 
     // Initialize the VAO
-    // A Vertex Array Object (or VAO) is an object that describes how the vertex
-    // attributes are stored in a Vertex Buffer Object (or VBO). This means that
-    // the VAO is not the actual object storing the vertex data,
-    // but the descriptor of the vertex data.
-
     VertexArrayObject VAO;
     VAO.init();
     VAO.bind();
 
-    // Initialize the VBO with the vertices data
-    // A VBO is a data container that lives in the GPU memory
+    // Initialize the VBOs
     line_VBO.init();
     line_V.resize(5,1);
     line_VBO.update(line_V);
@@ -849,12 +863,11 @@ int main(void)
     tri_V.resize(5,1);
     tri_VBO.update(tri_V);
 
+    // Initialize view scale and position
     view_scale << 1, 0, 0, 1;
     view_pos << 0, 0;
 
     // Initialize the OpenGL Program
-    // A program controls the OpenGL pipeline and it must contains
-    // at least a vertex shader and a fragment shader to be valid
     Program program;
     const GLchar* vertex_shader =
             "#version 150 core\n"
@@ -881,8 +894,6 @@ int main(void)
     program.init(vertex_shader,fragment_shader,"fragmentColor");
     program.bind();
 
-
-
     // Register the keyboard callback
     glfwSetKeyCallback(window, key_callback);
 
@@ -900,7 +911,7 @@ int main(void)
     {
         VAO.bind();
 
-        // Bind your program
+        // Bind program
         program.bind();
 
         // Set the uniform view matrix and translation vectors
@@ -910,7 +921,6 @@ int main(void)
         // Clear the framebuffer
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
-
 
         // Draw all complete triangles
         if(tri_V.cols()>0)
@@ -933,6 +943,7 @@ int main(void)
         {
             if(clicked_triangle.clicked)
             {
+                //draw white border around selected triangle
                 line_VBO.bind();
 
                 glEnableVertexAttribArray(0);
@@ -948,7 +959,7 @@ int main(void)
             
         }
         
-        //if a line is being drawn
+        //if a triangle is being inserted
         if(mode == 'i')
         {
             line_VBO.bind();
@@ -972,18 +983,24 @@ int main(void)
             
         }
 
+        // if animation is playing
         if(mode == 'p')
         {
-            //animation of key frames
+            // track time elapsed since animation start
             auto t_now = std::chrono::high_resolution_clock::now();
             float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
 
             if(time > 0)
             {
+                // find indices in the animation matrix, anim_tri_V
+                // corresponding to the 2 keyframes of the animation at current time
                 int k_0 = floor(time / time_step)*num_anim_V;
                 int k_1 = ceil(time / time_step)*num_anim_V;
+
+                // if it's not the end of the animation
                 if(ceil(time/time_step)<num_keyframes)
                 {
+                    // interpolate between triangle positions and colors at the 2 key frames
                     for(unsigned i=0; i<tri_V.cols(); i++)
                     {
                         tri_V.col(i) = anim_tri_V.col(k_0+i)+(anim_tri_V.col(k_1+i)-anim_tri_V.col(k_0+i))*(time-floor(time / time_step));
@@ -994,10 +1011,7 @@ int main(void)
                 {
                     t_start = t_now;
                 }
-                
             }
-
-
         }
 
         // Swap front and back buffers
@@ -1009,7 +1023,6 @@ int main(void)
 
     // Deallocate opengl memory
     program.free();
-
     line_VBO.free();
     tri_VBO.free();
 

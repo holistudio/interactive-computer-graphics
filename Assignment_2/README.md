@@ -2,6 +2,8 @@
 
 Using C++ and OpenGL, this program allows for a user to draw triangles, transform, and animate them. The user can also control the view's zoom and x-y position.
 
+Full demo on [Vimeo](https://vimeo.com/368192125)
+
 ## Task 1.1 Triangle Soup Editor
 
 <div>

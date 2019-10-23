@@ -62,8 +62,18 @@ Keys 'a' 'w' 'd' 's' pressed in that order.
 
 Zooming in and out with '+' and '-' keys
 
+(**Note:** By '+' key, I really mean the '=' key, where '+' is shown above. Pressing SHIFT and '=' key to zoom in is not necessary. But hey, Adobe Illustrator follows a similar convention.)
+
 ## Task 1.5
 
 After the user presses the 'm' key, they can draw triangles for an animation. Subsequent keyframes are made by pressing the '.' key. While they are free to rotate, translate, and color triangle vertices, after the first keyframe they cannot add any more triangles to the scene. When they are finished with the entire animation sequence, users can press the '/' key to see an animation loop interpolating between keyframes, with each keyframe one second apart.
 
 <img src="img/task1-5.gif" width="600">
+
+The animation is stopped when the user presses any key after the animation plays.
+
+# References
+
+As always, *Fundamentals of Computer Graphics* by Marschner and Shirley was an invaluable resource. Chapter 2.7 and Chapter 17 were frequently referenced.
+
+Additional help on Eigen Matrix manipulation came from this posting: https://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c (thank the gods for StackOverFlow).

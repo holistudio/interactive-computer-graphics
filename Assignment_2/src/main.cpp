@@ -447,16 +447,20 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                         }
                     }
 
-                    //prepare line VBO for drawing a white border around selected triangle
-                    line_V.resize(5,3);
-
-                    for(unsigned i = 0; i<3; i++)
+                    if(clicked_triangle.clicked)
                     {
-                        line_V.col(i) << tri_V.col(clicked_triangle.clicked_index+i).coeff(0),
-                                        tri_V.col(clicked_triangle.clicked_index+i).coeff(1), 
-                                        1.0,1.0,1.0;
+                        //update line VBO for drawing a white border around selected triangle
+                        line_V.resize(5,3);
+
+                        for(unsigned i = 0; i<3; i++)
+                        {
+                            line_V.col(i) << tri_V.col(clicked_triangle.clicked_index+i).coeff(0),
+                                            tri_V.col(clicked_triangle.clicked_index+i).coeff(1), 
+                                            1.0,1.0,1.0;
+                        }
+                        line_VBO.update(line_V);
                     }
-                    line_VBO.update(line_V);
+
                     tri_VBO.update(tri_V);
                 }
                 break;

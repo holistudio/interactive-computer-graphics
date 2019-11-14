@@ -19,6 +19,7 @@ using namespace Eigen;
 using namespace std;
 #include <chrono>
 #include <iostream>
+#include <fstream>
 #include <limits>
 
 // VertexBufferObject wrapper
@@ -101,7 +102,18 @@ class triangle
         int clicked_index; //start index on tri_V matrix
 };
 
-
+class tri_mesh
+{
+    //basic triangular mesh
+    public:
+        //V is a matrix (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
+        MatrixXd V;
+        //F is an matrix (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
+        MatrixXd F;
+        Vector3d color;
+        char shader_type;
+        bool mirror=false;
+};
 
 // global variable for storing the clicked triangle's properties
 triangle clicked_triangle;
@@ -112,6 +124,108 @@ int v_clicked = 0;
 // vector of colors for shading vertices in Task 1.3
 vector<color> colors;
 
+vector<string> space_sep_string(string line)
+{
+    //separates string into a vector of substring as space dividers
+    vector<int> split_index;
+    vector<string> substrings;
+    for (unsigned i=0;i<line.size();i++)
+    {
+        if(line[i]==' ')
+        {
+            split_index.push_back(i);
+        }
+    }
+
+    int split_start = 0;
+    int substr_len;
+    for (unsigned i=0;i<split_index.size()+1;i++)
+    {
+        if(i<split_index.size())
+        {
+            substr_len= split_index[i] - split_start;
+        }
+        else
+        {
+            substr_len= line.size() - split_start;
+        }
+        substrings.push_back(line.substr(split_start,substr_len));
+        if(i<split_index.size())
+        {
+            split_start = split_index[i]+1;
+        }
+        
+    }
+    return substrings;
+}
+
+tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
+{
+    // returns a triangule mesh object at the file path for the OFF file
+    tri_mesh mesh_structure;
+    mesh_structure.color = Vector3d(255,255,255);
+    mesh_structure.shader_type = 'd';
+
+    // mesh vertices
+    int num_vertices;
+    // mesh faces
+    int num_faces;
+    ifstream in(off_filepath);
+
+    char str[255];
+    bool summary_line_read = false;
+    vector<string> substrings;
+
+    //read the first line
+    in.getline(str,255);
+
+    //if the first line says 'OFF' continue
+    if(string(str).compare("OFF")==0)
+    {  
+        std::cout << "Valid OFF File" << std::endl;
+        while (summary_line_read == false && in.getline(str,255)) 
+        {
+            if(str[0]!='#')
+            {
+                //then read the next line that doesn't start with '#'
+                
+                substrings = space_sep_string(string(str));
+                // std::cout << stoi(substrings[1]) << std::endl;
+                num_vertices = stoi(substrings[0]);
+                num_faces = stoi(substrings[1]);
+                summary_line_read = true;
+            }
+        }
+
+        //vertices.resize(num_vertices,3);
+        mesh_structure.V.resize(num_vertices,3);
+        mesh_structure.F.resize(num_faces,3);
+
+        for (unsigned i=0;i<num_vertices;i++)
+        {
+            //load matrix V with vertices
+            in.getline(str,255);
+            substrings = space_sep_string(string(str));
+            mesh_structure.V.row(i) << stod(substrings[0])*scale+position.coeff(0),
+            stod(substrings[1])*scale+position.coeff(1),
+            stod(substrings[2])*scale+position.coeff(2);
+        }
+
+        for (unsigned i=0;i<num_faces;i++)
+        {
+            in.getline(str,255);
+            substrings = space_sep_string(string(str));
+            mesh_structure.F.row(i) << stoi(substrings[1]),stoi(substrings[2]),stoi(substrings[3]);
+        }
+        return mesh_structure;
+    }
+    else
+    {
+        //otherwise exit with output "Invalid file (not OFF file)"
+        std::cout << "Invalid file (not OFF file)" << std::endl;
+        return mesh_structure;
+    }
+}
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {

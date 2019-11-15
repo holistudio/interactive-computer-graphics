@@ -660,6 +660,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     {
         switch (key)
         {
+            case GLFW_KEY_1:
+                load_mesh("../data/cube.off",Vector3d(0.5,0,0),1/4.5/4);
+            case GLFW_KEY_2:
+                load_mesh("../data/bumpy_cube.off",Vector3d(0.5,0,0),1/4.5/4);
+            case GLFW_KEY_3:
+                load_mesh("../data/bunny.off",Vector3d(0.5,0,0),1/4.5/4);
             case  GLFW_KEY_I:
                 mode='i';
                 click_count = 0;

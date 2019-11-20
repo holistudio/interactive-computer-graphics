@@ -25,10 +25,12 @@ using namespace std;
 // VertexBufferObject wrapper
 VertexBufferObject line_VBO;
 VertexBufferObject tri_VBO;
+VertexBufferObject mesh_VBO;
 
-// Contains the vertex positions of the linse and triangles
-Eigen::MatrixXf line_V(5,1);
-Eigen::MatrixXf tri_V(5,1);
+// Contains the vertex positions of the lines and triangles
+MatrixXf line_V(5,1);
+MatrixXf tri_V(5,1);
+MatrixXf mesh_V(6,1);
 
 // variables for tracking which mode the drawing application is in
 char mode = ' ';
@@ -94,6 +96,14 @@ class point
         }
 };
 
+
+struct Vertex 
+{
+  Vector3f position;
+  Vector3f normal;
+  Vector3f color;
+};
+
 class triangle
 {
     public:
@@ -106,10 +116,11 @@ class tri_mesh
 {
     //basic triangular mesh
     public:
-        //V is a matrix (dimension #V × 3 where #V is the number of vertices) that contains the positions of the vertices of the mesh
-        MatrixXd V;
-        //F is an matrix (dimension #faces × 3 where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
-        MatrixXd F;
+        //V is a matrix (dimension 6 x #V where #V is the number of vertices)
+        // contains the positions and colors of the vertices of the mesh TODO: normals as well
+        MatrixXf V;
+        //F is an matrix (dimension 3 x #F where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
+        MatrixXf F;
         Vector3d color;
         char shader_type;
         bool mirror=false;
@@ -123,6 +134,8 @@ int v_clicked = 0;
 
 // vector of colors for shading vertices in Task 1.3
 vector<color> colors;
+
+vector<tri_mesh> meshes;
 
 vector<string> space_sep_string(string line)
 {
@@ -198,24 +211,26 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
         }
 
         //vertices.resize(num_vertices,3);
-        mesh_structure.V.resize(num_vertices,3);
-        mesh_structure.F.resize(num_faces,3);
+        mesh_structure.V.resize(6,num_vertices);
+        mesh_structure.F.resize(3,num_faces);
+
 
         for (unsigned i=0;i<num_vertices;i++)
         {
             //load matrix V with vertices
             in.getline(str,255);
             substrings = space_sep_string(string(str));
-            mesh_structure.V.row(i) << stod(substrings[0])*scale+position.coeff(0),
-            stod(substrings[1])*scale+position.coeff(1),
-            stod(substrings[2])*scale+position.coeff(2);
+            mesh_structure.V.col(i) << stof(substrings[0])*scale+position.coeff(0),
+            stof(substrings[1])*scale+position.coeff(1),
+            stof(substrings[2])*scale+position.coeff(2),
+            1.0f, 1.0f, 1.0f;
         }
 
         for (unsigned i=0;i<num_faces;i++)
         {
             in.getline(str,255);
             substrings = space_sep_string(string(str));
-            mesh_structure.F.row(i) << stoi(substrings[1]),stoi(substrings[2]),stoi(substrings[3]);
+            mesh_structure.F.col(i) << stoi(substrings[1]),stoi(substrings[2]),stoi(substrings[3]);
         }
         return mesh_structure;
     }
@@ -661,254 +676,281 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         switch (key)
         {
             case GLFW_KEY_1:
-                load_mesh("../data/cube.off",Vector3d(0.5,0,0),1/4.5/4);
-            case GLFW_KEY_2:
-                load_mesh("../data/bumpy_cube.off",Vector3d(0.5,0,0),1/4.5/4);
-            case GLFW_KEY_3:
-                load_mesh("../data/bunny.off",Vector3d(0.5,0,0),1/4.5/4);
-            case  GLFW_KEY_I:
-                mode='i';
-                click_count = 0;
-                std::cout << "Triangle Insert Mode" << std::endl;
-                break;
-            case  GLFW_KEY_O:
-                mode='m';
-                click_count = 0;
-                std::cout << "Triangle Move Mode" << std::endl;
-                break;
-            case  GLFW_KEY_P:
-                mode='d';
-                click_count = 0;
-                std::cout << "Triangle Delete Mode" << std::endl;
-                break;
-            case  GLFW_KEY_C:
-                mode = 'c';
-                click_count = 0; 
-                std::cout << "Vertex Color Mode" << std::endl;
-                break;
-            case  GLFW_KEY_M:
-                animation_mode = true;
-                click_count = 0;
-                cout << "*** Animation Mode ***" << endl;
-                cout << "Set up keyframe " << num_keyframes+1 << endl;
-                cout << "Draw first keyframe of triangles." << endl; 
-                cout << "Note that you CANNOT ADD triangles after setting up first keyframe"<< endl;
-                cout << "Press the '.' key when done" << endl;
-                break;
-            case  GLFW_KEY_EQUAL:
-                view_scale = view_scale + 0.2*MatrixXf::Identity(2,2);
-                click_count = 0;
-                break;
-            case  GLFW_KEY_MINUS:
-                view_scale = view_scale - 0.2*MatrixXf::Identity(2,2);
-                click_count = 0;
-                break;
-            case  GLFW_KEY_W:
-                view_pos = view_pos - (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
-                click_count = 0;
-                break;
-            case  GLFW_KEY_S:
-                view_pos = view_pos + (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
-                click_count = 0;
-                break;
-            case  GLFW_KEY_A:
-                view_pos = view_pos + (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
-                click_count = 0;
-                break;
-            case  GLFW_KEY_D:
-                view_pos = view_pos - (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
-                click_count = 0;
-                break;
-            case  GLFW_KEY_T:
-                //populate the screen with triangles for testing view scaling and translation for Task 1.4
+            {                
+                tri_mesh cube = load_mesh("../data/cube.off",Vector3d(0,0,0),1);
+                meshes.push_back(cube);
 
-                //with no initial zoom or translation,
-                //white triangle tip will touch the screen edge after pressing 'S' key once, 
-                //demonstrating that the view is translated 20% of screen height
+                int insert_start;
+                if(mesh_V.cols()==1)
+                {
+                    insert_start = 0;
+                    mesh_V.conservativeResize(NoChange, cube.F.cols()*3);
+                }
+                else
+                {
+                    insert_start = mesh_V.cols(); 
+                    mesh_V.conservativeResize(NoChange, mesh_V.cols()+cube.F.cols()*3); 
+                }
+                for(unsigned i=0; i<cube.F.cols();i++)
+                {
+                    for(unsigned j=0; j<cube.F.rows();j++)
+                    {
+                        mesh_V.col(insert_start) << cube.V.col((int)cube.F.coeffRef(j,i));
+                        insert_start++;
+                    }
+                }
 
-                //with no initial zoom or translation,
-                //red triangle tip will touch screen edge after pressing '+' key once and 'S' key once
-                //demonstrating that the view is *consistently* translated 20% of screen height
-                //regardless of zoom
-                tri_V.conservativeResize(5,6);
-                tri_V << 0, 0.5, -0.5, 0, 0.5, -0.5,
-                        0.6,  0, 0, 0.5, 0, 0,
-                        1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                        1.0, 1.0, 1.0, 0, 0, 0,
-                        1.0, 1.0, 1.0, 0, 0, 0;
-                tri_VBO.update(tri_V);
-                click_count = 0;
-                break;
+                cout << mesh_V << endl;
+                //update triangle VBO
+                mesh_VBO.update(mesh_V);
+            }
+            // case GLFW_KEY_2:
+            //     load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),1);
+            // case GLFW_KEY_3:
+            //     load_mesh("../data/bunny.off",Vector3d(0,0,0),1);
+            // case  GLFW_KEY_I:
+            //     mode='i';
+            //     click_count = 0;
+            //     std::cout << "Triangle Insert Mode" << std::endl;
+            //     break;
+            // case  GLFW_KEY_O:
+            //     mode='m';
+            //     click_count = 0;
+            //     std::cout << "Triangle Move Mode" << std::endl;
+            //     break;
+            // case  GLFW_KEY_P:
+            //     mode='d';
+            //     click_count = 0;
+            //     std::cout << "Triangle Delete Mode" << std::endl;
+            //     break;
+            // case  GLFW_KEY_C:
+            //     mode = 'c';
+            //     click_count = 0; 
+            //     std::cout << "Vertex Color Mode" << std::endl;
+            //     break;
+            // case  GLFW_KEY_M:
+            //     animation_mode = true;
+            //     click_count = 0;
+            //     cout << "*** Animation Mode ***" << endl;
+            //     cout << "Set up keyframe " << num_keyframes+1 << endl;
+            //     cout << "Draw first keyframe of triangles." << endl; 
+            //     cout << "Note that you CANNOT ADD triangles after setting up first keyframe"<< endl;
+            //     cout << "Press the '.' key when done" << endl;
+            //     break;
+            // case  GLFW_KEY_EQUAL:
+            //     view_scale = view_scale + 0.2*MatrixXf::Identity(2,2);
+            //     click_count = 0;
+            //     break;
+            // case  GLFW_KEY_MINUS:
+            //     view_scale = view_scale - 0.2*MatrixXf::Identity(2,2);
+            //     click_count = 0;
+            //     break;
+            // case  GLFW_KEY_W:
+            //     view_pos = view_pos - (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
+            //     click_count = 0;
+            //     break;
+            // case  GLFW_KEY_S:
+            //     view_pos = view_pos + (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
+            //     click_count = 0;
+            //     break;
+            // case  GLFW_KEY_A:
+            //     view_pos = view_pos + (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
+            //     click_count = 0;
+            //     break;
+            // case  GLFW_KEY_D:
+            //     view_pos = view_pos - (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
+            //     click_count = 0;
+            //     break;
+            // case  GLFW_KEY_T:
+            //     //populate the screen with triangles for testing view scaling and translation for Task 1.4
+
+            //     //with no initial zoom or translation,
+            //     //white triangle tip will touch the screen edge after pressing 'S' key once, 
+            //     //demonstrating that the view is translated 20% of screen height
+
+            //     //with no initial zoom or translation,
+            //     //red triangle tip will touch screen edge after pressing '+' key once and 'S' key once
+            //     //demonstrating that the view is *consistently* translated 20% of screen height
+            //     //regardless of zoom
+            //     tri_V.conservativeResize(5,6);
+            //     tri_V << 0, 0.5, -0.5, 0, 0.5, -0.5,
+            //             0.6,  0, 0, 0.5, 0, 0,
+            //             1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            //             1.0, 1.0, 1.0, 0, 0, 0,
+            //             1.0, 1.0, 1.0, 0, 0, 0;
+            //     tri_VBO.update(tri_V);
+            //     click_count = 0;
+            //     break;
             default:
                 break;
         }
         
-        // animation mode
-        if(animation_mode)
-        {
-            // if animation is playing and another key has been pressed.
-            if(mode == 'p')
-            {
-                // stop the animation
-                animation_mode = false;
+        // // animation mode
+        // if(animation_mode)
+        // {
+        //     // if animation is playing and another key has been pressed.
+        //     if(mode == 'p')
+        //     {
+        //         // stop the animation
+        //         animation_mode = false;
 
-                // clear animation keyframes
-                anim_tri_V = MatrixXf::Zero(5,1);
-                num_keyframes = 0;
-                std::cout << "Animation ended. All keyframes cleared" << std::endl;
+        //         // clear animation keyframes
+        //         anim_tri_V = MatrixXf::Zero(5,1);
+        //         num_keyframes = 0;
+        //         std::cout << "Animation ended. All keyframes cleared" << std::endl;
 
-                // set mode to triangle translation mode
-                mode='m';
-                click_count = 0;
-                std::cout << "Triangle Move Mode" << std::endl;
-            }
-            else
-            {
-                switch (key)
-                {
-                    case  GLFW_KEY_PERIOD:
-                    {
-                        click_count=0;
-                        if(num_keyframes == 0)
-                        {
-                            //the first time period is clicked, the first animation key frame is added
-                            //number of columns in tri_V should be stored
-                            num_anim_V = tri_V.cols();
-                            anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V-1);
-                        }
-                        else
-                        {
-                            anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
-                        }
-                        //store tri_V into anim_tri_V
-                        for(unsigned i=0; i<num_anim_V; i++)
-                        {
-                            anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
-                        }
-                        num_keyframes++;
-                        cout << "------" << endl;
-                        cout << "Set up keyframe " << num_keyframes+1 << endl;
-                        cout << "Move/Rotate/Scale/Change Vertex Colors Only. DO NOT ADD TRIANGLES TO SCENE." << endl;
-                        cout << "Press the '.' key to add current scene as a keyframe and continue adding key frames." << endl;
-                        cout << "Press the '/' key to add current scene as last keyframe and play the animation!" << endl;
-                        break;
-                    }
-                    case  GLFW_KEY_SLASH:
-                        cout << "*** Animation Now Playing! ***" << endl;
+        //         // set mode to triangle translation mode
+        //         mode='m';
+        //         click_count = 0;
+        //         std::cout << "Triangle Move Mode" << std::endl;
+        //     }
+        //     else
+        //     {
+        //         switch (key)
+        //         {
+        //             case  GLFW_KEY_PERIOD:
+        //             {
+        //                 click_count=0;
+        //                 if(num_keyframes == 0)
+        //                 {
+        //                     //the first time period is clicked, the first animation key frame is added
+        //                     //number of columns in tri_V should be stored
+        //                     num_anim_V = tri_V.cols();
+        //                     anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V-1);
+        //                 }
+        //                 else
+        //                 {
+        //                     anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
+        //                 }
+        //                 //store tri_V into anim_tri_V
+        //                 for(unsigned i=0; i<num_anim_V; i++)
+        //                 {
+        //                     anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
+        //                 }
+        //                 num_keyframes++;
+        //                 cout << "------" << endl;
+        //                 cout << "Set up keyframe " << num_keyframes+1 << endl;
+        //                 cout << "Move/Rotate/Scale/Change Vertex Colors Only. DO NOT ADD TRIANGLES TO SCENE." << endl;
+        //                 cout << "Press the '.' key to add current scene as a keyframe and continue adding key frames." << endl;
+        //                 cout << "Press the '/' key to add current scene as last keyframe and play the animation!" << endl;
+        //                 break;
+        //             }
+        //             case  GLFW_KEY_SLASH:
+        //                 cout << "*** Animation Now Playing! ***" << endl;
                         
-                        //store last keyframe tri_V into anim_tri_V
-                        anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
-                        for(unsigned i=0; i<num_anim_V; i++)
-                        {
-                            anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
-                        }
-                        num_keyframes++;
+        //                 //store last keyframe tri_V into anim_tri_V
+        //                 anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
+        //                 for(unsigned i=0; i<num_anim_V; i++)
+        //                 {
+        //                     anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
+        //                 }
+        //                 num_keyframes++;
 
-                        // Store the current time for tracking animation time
-                        t_start = std::chrono::high_resolution_clock::now();
+        //                 // Store the current time for tracking animation time
+        //                 t_start = std::chrono::high_resolution_clock::now();
 
-                        // change application mode
-                        mode = 'p';
-                        break;
-                    default: 
-                        break;
-                }
-            }
-        }
+        //                 // change application mode
+        //                 mode = 'p';
+        //                 break;
+        //             default: 
+        //                 break;
+        //         }
+        //     }
+        // }
 
         
-        if(clicked_triangle.clicked)
-        {
-            // store current mouse position for calculating triangle's translation to follow mouse
-            point world_click = screen_to_world(window);
-            start_click << double(world_click.x), double(world_click.y);
+        // if(clicked_triangle.clicked)
+        // {
+        //     // store current mouse position for calculating triangle's translation to follow mouse
+        //     point world_click = screen_to_world(window);
+        //     start_click << double(world_click.x), double(world_click.y);
 
-            // if triangle is clicked, additional key presses can rotate/scale selected triangle
-            switch (key)
-            {
-                case  GLFW_KEY_H:
-                {
-                    //rotation matrix
-                    float radians = 10 * 3.141592f / 180;
-                    Matrix2f rotation;
-                    rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
-                    transform_triangle(window, clicked_triangle, rotation);
-                    break;
-                }
-                case  GLFW_KEY_J:
-                {
-                    //rotation matrix
-                    float radians = -10 * 3.141592f / 180;
-                    Matrix2f rotation;
-                    rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
-                    transform_triangle(window, clicked_triangle, rotation);
-                    break;
-                }
-                case  GLFW_KEY_K:
-                {
-                    Matrix2f scale;
-                    scale << 1.25, 0, 0, 1.25;
-                    transform_triangle(window, clicked_triangle, scale);
-                    break;
-                }
-                case  GLFW_KEY_L:
-                {
-                    Matrix2f scale;
-                    scale << 0.75, 0, 0, 0.75;
-                    transform_triangle(window, clicked_triangle, scale);
-                    break;
-                }
-                default:
-                    break;
-            }
-        }
+        //     // if triangle is clicked, additional key presses can rotate/scale selected triangle
+        //     switch (key)
+        //     {
+        //         case  GLFW_KEY_H:
+        //         {
+        //             //rotation matrix
+        //             float radians = 10 * 3.141592f / 180;
+        //             Matrix2f rotation;
+        //             rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
+        //             transform_triangle(window, clicked_triangle, rotation);
+        //             break;
+        //         }
+        //         case  GLFW_KEY_J:
+        //         {
+        //             //rotation matrix
+        //             float radians = -10 * 3.141592f / 180;
+        //             Matrix2f rotation;
+        //             rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
+        //             transform_triangle(window, clicked_triangle, rotation);
+        //             break;
+        //         }
+        //         case  GLFW_KEY_K:
+        //         {
+        //             Matrix2f scale;
+        //             scale << 1.25, 0, 0, 1.25;
+        //             transform_triangle(window, clicked_triangle, scale);
+        //             break;
+        //         }
+        //         case  GLFW_KEY_L:
+        //         {
+        //             Matrix2f scale;
+        //             scale << 0.75, 0, 0, 0.75;
+        //             transform_triangle(window, clicked_triangle, scale);
+        //             break;
+        //         }
+        //         default:
+        //             break;
+        //     }
+        // }
 
-        // in vertex color mode, additional keys change vertex color
-        if(mode=='c')
-        {
-            if(click_count>0)
-            {
-                int color_index = 0;
-                switch (key)
-                {
-                    case  GLFW_KEY_1:
-                        color_index = 0;
-                        break;
-                    case  GLFW_KEY_2:
-                        color_index = 1;
-                        break;
-                    case  GLFW_KEY_3:
-                        color_index = 2;
-                        break;
-                    case  GLFW_KEY_4:
-                        color_index = 3;
-                        break;
-                    case  GLFW_KEY_5:
-                        color_index = 4;
-                        break;
-                    case  GLFW_KEY_6:
-                        color_index = 5;
-                        break;
-                    case  GLFW_KEY_7:
-                        color_index = 6;
-                        break;
-                    case  GLFW_KEY_8:
-                        color_index = 7;
-                        break;
-                    case  GLFW_KEY_9:
-                        color_index = 8;
-                        break;
-                    default:
-                        break;
-                }
+        // // in vertex color mode, additional keys change vertex color
+        // if(mode=='c')
+        // {
+        //     if(click_count>0)
+        //     {
+        //         int color_index = 0;
+        //         switch (key)
+        //         {
+        //             case  GLFW_KEY_1:
+        //                 color_index = 0;
+        //                 break;
+        //             case  GLFW_KEY_2:
+        //                 color_index = 1;
+        //                 break;
+        //             case  GLFW_KEY_3:
+        //                 color_index = 2;
+        //                 break;
+        //             case  GLFW_KEY_4:
+        //                 color_index = 3;
+        //                 break;
+        //             case  GLFW_KEY_5:
+        //                 color_index = 4;
+        //                 break;
+        //             case  GLFW_KEY_6:
+        //                 color_index = 5;
+        //                 break;
+        //             case  GLFW_KEY_7:
+        //                 color_index = 6;
+        //                 break;
+        //             case  GLFW_KEY_8:
+        //                 color_index = 7;
+        //                 break;
+        //             case  GLFW_KEY_9:
+        //                 color_index = 8;
+        //                 break;
+        //             default:
+        //                 break;
+        //         }
 
-                tri_V.col(v_clicked).coeffRef(2) = colors[color_index].r;
-                tri_V.col(v_clicked).coeffRef(3) = colors[color_index].g;
-                tri_V.col(v_clicked).coeffRef(4) = colors[color_index].b;
+        //         tri_V.col(v_clicked).coeffRef(2) = colors[color_index].r;
+        //         tri_V.col(v_clicked).coeffRef(3) = colors[color_index].g;
+        //         tri_V.col(v_clicked).coeffRef(4) = colors[color_index].b;
 
-                tri_VBO.update(tri_V);
-            }
-        }
+        //         tri_VBO.update(tri_V);
+        //     }
+        // }
 
     }
 }
@@ -990,6 +1032,10 @@ int main(void)
     tri_V.resize(5,1);
     tri_VBO.update(tri_V);
 
+    mesh_VBO.init();
+    mesh_V.resize(6,1);
+    mesh_VBO.update(mesh_V);
+
     // Initialize view scale and position
     view_scale << 1, 0, 0, 1;
     view_pos << 0, 0;
@@ -998,7 +1044,7 @@ int main(void)
     Program program;
     const GLchar* vertex_shader =
             "#version 150 core\n"
-                    "in vec2 position;"
+                    "in vec3 position;"
                     "in vec3 inColor;"
                     "uniform mat2 scale;"
                     "uniform vec2 translation;"
@@ -1006,7 +1052,7 @@ int main(void)
                     "void main()"
                     "{"
                     "    vertexColor = inColor;"
-                    "    gl_Position = vec4(scale * (position + translation), 0.0, 1.0);"
+                    "    gl_Position = vec4(position, 1.0);"
                     "}";
     const GLchar* fragment_shader =
             "#version 150 core\n"
@@ -1064,6 +1110,27 @@ int main(void)
                 glDrawArrays(GL_TRIANGLES, i*3, 3);
             }
         }
+        
+        if(mesh_V.cols()>0)
+        {
+            mesh_VBO.bind();
+            //for each mesh
+
+            //draw mesh elements
+            //TODO: vertex normals for shading calcs 
+
+                glEnableVertexAttribArray(1);
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+
+                glEnableVertexAttribArray(0);
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
+                for(unsigned j=0; j<mesh_V.cols()/3; j++)
+                {
+                    //draw triangles
+                    glDrawArrays(GL_TRIANGLES, j*3, 3);
+                }
+        }
+            
 
         //if triangle is selected
         if(mode == 'm')

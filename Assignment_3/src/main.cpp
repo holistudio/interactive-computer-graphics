@@ -96,20 +96,19 @@ class point
         }
 };
 
-
-struct Vertex 
-{
-  Vector3f position;
-  Vector3f normal;
-  Vector3f color;
-};
-
 class triangle
 {
     public:
         vector<point> v; //vector of vertices
         bool clicked = false; // tracks whether there is a triangle selected on the screen or not
         int clicked_index; //start index on tri_V matrix
+};
+
+struct Vertex 
+{
+  Vector3f position;
+  Vector3f normal;
+  Vector3f color;
 };
 
 class tri_mesh
@@ -128,6 +127,7 @@ class tri_mesh
 
 // global variable for storing the clicked triangle's properties
 triangle clicked_triangle;
+tri_mesh clicked_mesh;
 
 // global variable for storing the clicked vertex's index position in tri_V
 int v_clicked = 0;
@@ -257,8 +257,6 @@ point screen_to_world(GLFWwindow* window)
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
 
-
-
     // Get the size of the window
     int width, height;
     glfwGetWindowSize(window, &width, &height);
@@ -386,53 +384,6 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 
     switch (mode)
     {
-        // Triangle Insert Mode
-        case 'i':
-        {
-            //after the first click, draw a segment from first click to wherever the mouse cursor is
-            //(continuously set the last column of the line matrix to mouse cursor position)
-            if(click_count>0)
-            {
-
-                //set line matrix column to mouse cursor position
-                line_V.col(click_count) << world_click.x, world_click.y , 1.0f, 1.0f, 1.0f;
-
-                //update VBO
-                line_VBO.update(line_V);
-
-                //mouse is now moving, and the line can now be rendered
-                mouse_move = true;
-            }
-            break;
-        }
-        // Triangle Move/Rotation/Scale Mode
-        case 'm':
-        {
-            // if a triangle has been clicked/selected
-            if(clicked_triangle.clicked)
-            {
-                //set current mouse position to vector mouse_pos
-                Vector2d mouse_pos;
-                mouse_pos << world_click.x, world_click.y;
-
-                //calculated difference btw start_click and mouse_pos
-                Vector2d tr = mouse_pos - start_click;
-                //translate all vertices of the clicked triangle
-                for(unsigned i = 0; i < clicked_triangle.v.size(); i++)
-                {
-                    tri_V.col(clicked_triangle.clicked_index+i).coeffRef(0)=clicked_triangle.v[i].x + tr.coeffRef(0);;
-                    tri_V.col(clicked_triangle.clicked_index+i).coeffRef(1)=clicked_triangle.v[i].y + tr.coeffRef(1);
-                    line_V.col(i) << tri_V.col(clicked_triangle.clicked_index+i).coeff(0),
-                                        tri_V.col(clicked_triangle.clicked_index+i).coeff(1), 
-                                        1.0,1.0,1.0;
-                }
-
-                //update triangle VBO
-                tri_VBO.update(tri_V);
-                line_VBO.update(line_V);
-            }
-            break;
-        }
         default:
             break;
     }
@@ -449,223 +400,10 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     {
         switch (mode)
         {
-            // Triangle Insert Mode
-            case 'i':
-            {
-                // at every click expand the line matrix by one column
-                if(line_V.cols()>0)
-                {
-                    line_V.conservativeResize(5 ,line_V.cols()+1);
-                }
-                else
-                {
-                    // except in the case where all triangles were previously deleted from the scene
-                    // leading to line_V becoming an empty variable
-                    // in that case, line_V needs to start with 2 columns
-                    line_V.conservativeResize(5 ,line_V.cols()+2);
-                }
-                
-                switch (click_count)
-                {
-                    case  0:
-                    {
-                        // if it's the first click set first column of line matrix to click position
-                        line_V.col(click_count) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;
-                        click_count = click_count+1;
-                        mouse_move=false;
-                        break;
-                    }
-                    case  1:
-                    {
-                        // on the second click, add click position to line matrix
-                        // then draw a line strip using the following line matrix
-                        // first click, second click, wherever the mouse cursor is, and first click
-                        line_V.col(click_count) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;
-                        
-                        //third vertex in matrix starts as the same as second vertex as a placeholder
-                        line_V.col(line_V.cols()-1) << world_click.x, world_click.y, 1.0f, 1.0f, 1.0f;
-
-                        // last vertex of line strip is same as first vertex of line strip (to just preview the triangle not draw one)
-                        line_V.conservativeResize(NoChange ,line_V.cols()+1); // requires a 4th column
-                        line_V.col(line_V.cols()-1) << line_V.col(0);
-                        click_count++;
-                        break;
-                    }
-                    case  2:
-                    {
-                        // add all three click positions to triangle matrix
-
-                        // depending on how many columns are in the tri_V matrix
-                        // resize so there's 3 extra columns to add new triangle
-                        int insert_start;
-                        if(tri_V.cols()==1)
-                        {
-                            insert_start = 0;
-                            tri_V.conservativeResize(NoChange ,tri_V.cols()+2);
-                        }
-                        else
-                        {
-                            insert_start = tri_V.cols();
-                            tri_V.conservativeResize(NoChange ,tri_V.cols()+3);
-                        }
-
-                        // new red triangle
-                        for(unsigned i=0; i<3; i++)
-                        {
-                            line_V.col(i).coeffRef(2) = 1.0f;
-                            line_V.col(i).coeffRef(3) = 0.0f;
-                            line_V.col(i).coeffRef(4) = 0.0f;
-                            tri_V.col(insert_start+i) << line_V.col(i);
-                        }
-
-                        //update triangle VBO
-                        tri_VBO.update(tri_V);
-
-                        //clear line matrix
-                        line_V = MatrixXf::Zero(5,1);
-                        //reset click count
-                        click_count=0;
-                        break;
-                    }
-                    default:
-                        break;
-                }
-                //update line VBO
-                line_VBO.update(line_V);
-                break;
-            }
-            case 'm':
-            {
-                // after a triangle has been selected,
-                // an additional click "deslects" the triangle
-                if(click_count>0)
-                {
-                    // remove line border around selected triangle
-                    removeColumn(line_V,0);
-                    removeColumn(line_V,0);
-                    removeColumn(line_V,0);
-                    line_VBO.update(line_V);
-
-                    // reset appropriate variables
-                    clicked_triangle.clicked = false;
-                    clicked_triangle.clicked_index = 0;
-                    click_count = 0;
-                }
-                else
-                {
-                    //check if click coordinates is in any triangles
-                    for(unsigned i=0; i<tri_V.cols(); i+= 3)
-                    {
-                        // assemble instance of triangle
-                        triangle test_triangle;
-                        for(unsigned k=0; k<3; k++)
-                        {
-                            test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1)));
-                        }
-
-                        if(click_triangle(world_click,test_triangle))
-                        {
-                            clicked_triangle = test_triangle;
-                            clicked_triangle.clicked = true;
-                            clicked_triangle.clicked_index = i;
-
-                            // to have the selected triangle move with the mouse
-                            // record mouse click position
-                            start_click << world_click.x, world_click.y;
-                            click_count++;
-                        }
-                    }
-
-                    if(clicked_triangle.clicked)
-                    {
-                        //update line VBO for drawing a white border around selected triangle
-                        line_V.resize(5,3);
-
-                        for(unsigned i = 0; i<3; i++)
-                        {
-                            line_V.col(i) << tri_V.col(clicked_triangle.clicked_index+i).coeff(0),
-                                            tri_V.col(clicked_triangle.clicked_index+i).coeff(1), 
-                                            1.0,1.0,1.0;
-                        }
-                        line_VBO.update(line_V);
-                    }
-
-                    tri_VBO.update(tri_V);
-                }
-                break;
-            }
-            case 'd':
-            {
-                //check if click coordinates is in any triangles
-                for(unsigned i=0; i<tri_V.cols(); i+= 3)
-                {
-                    triangle test_triangle;
-                    for(unsigned k=0; k<3; k++)
-                    {
-                        test_triangle.v.push_back(point(tri_V.col(i+k).coeff(0),tri_V.col(i+k).coeff(1)));
-                    }
-
-                    //delete vertex columns if click is inside triangle
-                    if(click_triangle(world_click,test_triangle))
-                    {
-                        removeColumn(tri_V,i);
-                        removeColumn(tri_V,i);
-                        removeColumn(tri_V,i);
-                        i=i-3;
-                    }
-                }
-                tri_VBO.update(tri_V);
-                break;
-            }
-            case 'c':
-            {
-                float v_dist;  // distance from click to vertex
-                float min_dist = numeric_limits<float>::infinity(); //set to infinity
-                
-                //for all vertices in tri_V
-                for(unsigned i=0; i<tri_V.cols(); i++)
-                {
-                    //calculate distance between mouse click and vertex, v_dist
-                    v_dist = (tri_V.col(i).coeff(0) - world_click.x)*(tri_V.col(i).coeff(0) - world_click.x) + (tri_V.col(i).coeff(1) - world_click.y)*(tri_V.col(i).coeff(1) - world_click.y);
-
-                    //if distance is less than min_dist
-                    if(v_dist < min_dist)
-                    {
-                        //set to v_dist as new min_dist
-                        min_dist = v_dist;
-
-                        //store index of vertex
-                        v_clicked = i;
-                    }
-                }
-
-                //change closest vertex color to blue
-                tri_V.col(v_clicked).coeffRef(2) = 0.0f;
-                tri_V.col(v_clicked).coeffRef(3) = 0.0f;
-                tri_V.col(v_clicked).coeffRef(4) = 1.0f;
-                tri_VBO.update(tri_V);
-                click_count++;
-                break;
-            }
             default:
                 break;
         }
     }
-    // The following commented out section of code is meant only for Task 1.1
-    // where releasing the left mouse button "releases" the clicked triangle.
-    // For Task 1.2 onwards, the triangle remains "selected" after mouse button release
-    // to allow for rotation and scaling
-    // else
-    // {
-    //     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-    //     {
-    //         if(tri_move_mode)
-    //         {
-    //             tri_clicked = false;
-    //             clicked_index = 0;
-    //         } 
-    //     }
-    // }
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -704,253 +442,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 //update triangle VBO
                 mesh_VBO.update(mesh_V);
             }
-            // case GLFW_KEY_2:
-            //     load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),1);
-            // case GLFW_KEY_3:
-            //     load_mesh("../data/bunny.off",Vector3d(0,0,0),1);
-            // case  GLFW_KEY_I:
-            //     mode='i';
-            //     click_count = 0;
-            //     std::cout << "Triangle Insert Mode" << std::endl;
-            //     break;
-            // case  GLFW_KEY_O:
-            //     mode='m';
-            //     click_count = 0;
-            //     std::cout << "Triangle Move Mode" << std::endl;
-            //     break;
-            // case  GLFW_KEY_P:
-            //     mode='d';
-            //     click_count = 0;
-            //     std::cout << "Triangle Delete Mode" << std::endl;
-            //     break;
-            // case  GLFW_KEY_C:
-            //     mode = 'c';
-            //     click_count = 0; 
-            //     std::cout << "Vertex Color Mode" << std::endl;
-            //     break;
-            // case  GLFW_KEY_M:
-            //     animation_mode = true;
-            //     click_count = 0;
-            //     cout << "*** Animation Mode ***" << endl;
-            //     cout << "Set up keyframe " << num_keyframes+1 << endl;
-            //     cout << "Draw first keyframe of triangles." << endl; 
-            //     cout << "Note that you CANNOT ADD triangles after setting up first keyframe"<< endl;
-            //     cout << "Press the '.' key when done" << endl;
-            //     break;
-            // case  GLFW_KEY_EQUAL:
-            //     view_scale = view_scale + 0.2*MatrixXf::Identity(2,2);
-            //     click_count = 0;
-            //     break;
-            // case  GLFW_KEY_MINUS:
-            //     view_scale = view_scale - 0.2*MatrixXf::Identity(2,2);
-            //     click_count = 0;
-            //     break;
-            // case  GLFW_KEY_W:
-            //     view_pos = view_pos - (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
-            //     click_count = 0;
-            //     break;
-            // case  GLFW_KEY_S:
-            //     view_pos = view_pos + (0.2*2/view_scale.coeff(1,1))*Vector2f::UnitY();
-            //     click_count = 0;
-            //     break;
-            // case  GLFW_KEY_A:
-            //     view_pos = view_pos + (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
-            //     click_count = 0;
-            //     break;
-            // case  GLFW_KEY_D:
-            //     view_pos = view_pos - (0.2*2/view_scale.coeff(0,0))*Vector2f::UnitX();
-            //     click_count = 0;
-            //     break;
-            // case  GLFW_KEY_T:
-            //     //populate the screen with triangles for testing view scaling and translation for Task 1.4
-
-            //     //with no initial zoom or translation,
-            //     //white triangle tip will touch the screen edge after pressing 'S' key once, 
-            //     //demonstrating that the view is translated 20% of screen height
-
-            //     //with no initial zoom or translation,
-            //     //red triangle tip will touch screen edge after pressing '+' key once and 'S' key once
-            //     //demonstrating that the view is *consistently* translated 20% of screen height
-            //     //regardless of zoom
-            //     tri_V.conservativeResize(5,6);
-            //     tri_V << 0, 0.5, -0.5, 0, 0.5, -0.5,
-            //             0.6,  0, 0, 0.5, 0, 0,
-            //             1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-            //             1.0, 1.0, 1.0, 0, 0, 0,
-            //             1.0, 1.0, 1.0, 0, 0, 0;
-            //     tri_VBO.update(tri_V);
-            //     click_count = 0;
-            //     break;
+            case GLFW_KEY_2:
+                load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),1);
+            case GLFW_KEY_3:
+                load_mesh("../data/bunny.off",Vector3d(0,0,0),1);
+            
             default:
                 break;
         }
-        
-        // // animation mode
-        // if(animation_mode)
-        // {
-        //     // if animation is playing and another key has been pressed.
-        //     if(mode == 'p')
-        //     {
-        //         // stop the animation
-        //         animation_mode = false;
-
-        //         // clear animation keyframes
-        //         anim_tri_V = MatrixXf::Zero(5,1);
-        //         num_keyframes = 0;
-        //         std::cout << "Animation ended. All keyframes cleared" << std::endl;
-
-        //         // set mode to triangle translation mode
-        //         mode='m';
-        //         click_count = 0;
-        //         std::cout << "Triangle Move Mode" << std::endl;
-        //     }
-        //     else
-        //     {
-        //         switch (key)
-        //         {
-        //             case  GLFW_KEY_PERIOD:
-        //             {
-        //                 click_count=0;
-        //                 if(num_keyframes == 0)
-        //                 {
-        //                     //the first time period is clicked, the first animation key frame is added
-        //                     //number of columns in tri_V should be stored
-        //                     num_anim_V = tri_V.cols();
-        //                     anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V-1);
-        //                 }
-        //                 else
-        //                 {
-        //                     anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
-        //                 }
-        //                 //store tri_V into anim_tri_V
-        //                 for(unsigned i=0; i<num_anim_V; i++)
-        //                 {
-        //                     anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
-        //                 }
-        //                 num_keyframes++;
-        //                 cout << "------" << endl;
-        //                 cout << "Set up keyframe " << num_keyframes+1 << endl;
-        //                 cout << "Move/Rotate/Scale/Change Vertex Colors Only. DO NOT ADD TRIANGLES TO SCENE." << endl;
-        //                 cout << "Press the '.' key to add current scene as a keyframe and continue adding key frames." << endl;
-        //                 cout << "Press the '/' key to add current scene as last keyframe and play the animation!" << endl;
-        //                 break;
-        //             }
-        //             case  GLFW_KEY_SLASH:
-        //                 cout << "*** Animation Now Playing! ***" << endl;
-                        
-        //                 //store last keyframe tri_V into anim_tri_V
-        //                 anim_tri_V.conservativeResize(NoChange, anim_tri_V.cols()+num_anim_V);
-        //                 for(unsigned i=0; i<num_anim_V; i++)
-        //                 {
-        //                     anim_tri_V.col(num_keyframes*num_anim_V+i) << tri_V.col(i);
-        //                 }
-        //                 num_keyframes++;
-
-        //                 // Store the current time for tracking animation time
-        //                 t_start = std::chrono::high_resolution_clock::now();
-
-        //                 // change application mode
-        //                 mode = 'p';
-        //                 break;
-        //             default: 
-        //                 break;
-        //         }
-        //     }
-        // }
-
-        
-        // if(clicked_triangle.clicked)
-        // {
-        //     // store current mouse position for calculating triangle's translation to follow mouse
-        //     point world_click = screen_to_world(window);
-        //     start_click << double(world_click.x), double(world_click.y);
-
-        //     // if triangle is clicked, additional key presses can rotate/scale selected triangle
-        //     switch (key)
-        //     {
-        //         case  GLFW_KEY_H:
-        //         {
-        //             //rotation matrix
-        //             float radians = 10 * 3.141592f / 180;
-        //             Matrix2f rotation;
-        //             rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
-        //             transform_triangle(window, clicked_triangle, rotation);
-        //             break;
-        //         }
-        //         case  GLFW_KEY_J:
-        //         {
-        //             //rotation matrix
-        //             float radians = -10 * 3.141592f / 180;
-        //             Matrix2f rotation;
-        //             rotation << cos(radians), sin(radians), -sin(radians), cos(radians);
-        //             transform_triangle(window, clicked_triangle, rotation);
-        //             break;
-        //         }
-        //         case  GLFW_KEY_K:
-        //         {
-        //             Matrix2f scale;
-        //             scale << 1.25, 0, 0, 1.25;
-        //             transform_triangle(window, clicked_triangle, scale);
-        //             break;
-        //         }
-        //         case  GLFW_KEY_L:
-        //         {
-        //             Matrix2f scale;
-        //             scale << 0.75, 0, 0, 0.75;
-        //             transform_triangle(window, clicked_triangle, scale);
-        //             break;
-        //         }
-        //         default:
-        //             break;
-        //     }
-        // }
-
-        // // in vertex color mode, additional keys change vertex color
-        // if(mode=='c')
-        // {
-        //     if(click_count>0)
-        //     {
-        //         int color_index = 0;
-        //         switch (key)
-        //         {
-        //             case  GLFW_KEY_1:
-        //                 color_index = 0;
-        //                 break;
-        //             case  GLFW_KEY_2:
-        //                 color_index = 1;
-        //                 break;
-        //             case  GLFW_KEY_3:
-        //                 color_index = 2;
-        //                 break;
-        //             case  GLFW_KEY_4:
-        //                 color_index = 3;
-        //                 break;
-        //             case  GLFW_KEY_5:
-        //                 color_index = 4;
-        //                 break;
-        //             case  GLFW_KEY_6:
-        //                 color_index = 5;
-        //                 break;
-        //             case  GLFW_KEY_7:
-        //                 color_index = 6;
-        //                 break;
-        //             case  GLFW_KEY_8:
-        //                 color_index = 7;
-        //                 break;
-        //             case  GLFW_KEY_9:
-        //                 color_index = 8;
-        //                 break;
-        //             default:
-        //                 break;
-        //         }
-
-        //         tri_V.col(v_clicked).coeffRef(2) = colors[color_index].r;
-        //         tri_V.col(v_clicked).coeffRef(3) = colors[color_index].g;
-        //         tri_V.col(v_clicked).coeffRef(4) = colors[color_index].b;
-
-        //         tri_VBO.update(tri_V);
-        //     }
-        // }
 
     }
 }
@@ -1095,21 +594,6 @@ int main(void)
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Draw all complete triangles
-        if(tri_V.cols()>0)
-        {
-            tri_VBO.bind();
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
-
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (const GLvoid *)8);
-            for(unsigned i=0; i<tri_V.cols()/3; i++)
-            {
-                //draw triangles
-                glDrawArrays(GL_TRIANGLES, i*3, 3);
-            }
-        }
         
         if(mesh_V.cols()>0)
         {
@@ -1135,78 +619,15 @@ int main(void)
         //if triangle is selected
         if(mode == 'm')
         {
-            if(clicked_triangle.clicked)
-            {
-                //draw white border around selected triangle
-                line_VBO.bind();
-
-                glEnableVertexAttribArray(0);
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (const GLvoid *)8);
-
-                glEnableVertexAttribArray(1);
-                glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
-                if(click_count>0)
-                {
-                    glDrawArrays(GL_LINE_LOOP,0,line_V.cols());
-                }
-            }
             
         }
         
         //if a triangle is being inserted
         if(mode == 'i')
         {
-            line_VBO.bind();
 
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (const GLvoid *)8);
-
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), 0);
-            if(click_count>0)
-            {
-                if(mouse_move)
-                {
-                    glDrawArrays(GL_LINE_STRIP,0,line_V.cols());
-                }
-                else
-                {
-                    glDrawArrays(GL_LINE_STRIP,0,line_V.cols()-1);
-                }   
-            }
-            
         }
 
-        // if animation is playing
-        if(mode == 'p')
-        {
-            // track time elapsed since animation start
-            auto t_now = std::chrono::high_resolution_clock::now();
-            float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
-
-            if(time > 0)
-            {
-                // find indices in the animation matrix, anim_tri_V
-                // corresponding to the 2 keyframes of the animation at current time
-                int k_0 = floor(time / time_step)*num_anim_V;
-                int k_1 = ceil(time / time_step)*num_anim_V;
-
-                // if it's not the end of the animation
-                if(ceil(time/time_step)<num_keyframes)
-                {
-                    // interpolate between triangle positions and colors at the 2 key frames
-                    for(unsigned i=0; i<tri_V.cols(); i++)
-                    {
-                        tri_V.col(i) = anim_tri_V.col(k_0+i)+(anim_tri_V.col(k_1+i)-anim_tri_V.col(k_0+i))*(time-floor(time / time_step));
-                    }
-                    tri_VBO.update(tri_V);
-                }
-                else
-                {
-                    t_start = t_now;
-                }
-            }
-        }
 
         // Swap front and back buffers
         glfwSwapBuffers(window);
@@ -1219,6 +640,7 @@ int main(void)
     program.free();
     line_VBO.free();
     tri_VBO.free();
+    mesh_VBO.free();
 
     // Deallocate glfw internals
     glfwTerminate();

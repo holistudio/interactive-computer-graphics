@@ -602,8 +602,8 @@ int main(void)
     // Initialize the OpenGL Program
     Program program;
     const GLchar* vertex_shader =
-            "#version 150 core\n"
-                    "in vec3 position;"
+            "#version 330 core\n"
+                    "layout(location=0) in vec3 position;"
                     "uniform mat2 scale;"
                     "uniform vec2 translation;"
                     "void main()"
@@ -611,7 +611,7 @@ int main(void)
                     "    gl_Position = vec4(position, 1.0);"
                     "}";
     const GLchar* fragment_shader =
-            "#version 150 core\n"
+            "#version 330 core\n"
                     "uniform vec3 meshColor;"
                     "uniform vec3 lightColor;"
                     "out vec4 fragmentColor;"

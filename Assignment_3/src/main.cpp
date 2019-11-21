@@ -129,7 +129,7 @@ class tri_mesh
         MatrixXf V;
         //F is an matrix (dimension 6 x #F where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
         MatrixXf F;
-        Vector3d color;
+        Vector3f color;
         char shader_type;
         bool mirror=false;
 };
@@ -185,7 +185,7 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
 {
     // returns a triangule mesh object at the file path for the OFF file
     tri_mesh mesh_structure;
-    mesh_structure.color = Vector3d(255,255,255);
+    mesh_structure.color = Vector3f(255,255,255);
     mesh_structure.shader_type = 'd';
 
     // mesh vertices
@@ -286,10 +286,6 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
             vertex_normal = vertex_normal.normalized();
             mesh_structure.V.block(3,i,3,1) << vertex_normal;
         }
-        cout << mesh_structure.V << endl;
-        
-
-
         return mesh_structure;
     }
     else
@@ -475,7 +471,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             {                
                 tri_mesh cube = load_mesh("../data/cube.off",Vector3d(0,0,0),1);
                 meshes.push_back(cube);
-
                 int insert_start;
                 if(mesh_V.cols()==1)
                 {
@@ -490,22 +485,24 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
                 for(unsigned i=0; i<cube.F.cols();i++)
                 {
-                    for(unsigned j=0; j<cube.F.rows();j++)
+                    for(unsigned j=0; j<3;j++)
                     {
                         mesh_V.col(insert_start) << cube.V.col((int)cube.F.coeffRef(j,i));
                         insert_start++;
                     }
                 }
 
-                cout << mesh_V << endl;
-                //update triangle VBO
+                //update VBO
                 mesh_VBO.update(mesh_V);
             }
             case GLFW_KEY_2:
+            {
                 load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),1);
+            } 
             case GLFW_KEY_3:
+            {
                 load_mesh("../data/bunny.off",Vector3d(0,0,0),1);
-            
+            }
             default:
                 break;
         }
@@ -607,22 +604,20 @@ int main(void)
     const GLchar* vertex_shader =
             "#version 150 core\n"
                     "in vec3 position;"
-                    "in vec3 inColor;"
                     "uniform mat2 scale;"
                     "uniform vec2 translation;"
-                    "out vec3 vertexColor;"
                     "void main()"
                     "{"
-                    "    vertexColor = inColor;"
                     "    gl_Position = vec4(position, 1.0);"
                     "}";
     const GLchar* fragment_shader =
             "#version 150 core\n"
-                    "in vec3 vertexColor;"
+                    "uniform vec3 meshColor;"
+                    "uniform vec3 lightColor;"
                     "out vec4 fragmentColor;"
                     "void main()"
                     "{"
-                    "    fragmentColor = vec4(vertexColor, 1.0);"
+                    "    fragmentColor = vec4(lightColor * meshColor, 1.0);"
                     "}";
 
     // Compile the two shaders and upload the binary to the GPU
@@ -657,25 +652,29 @@ int main(void)
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        
+        glUniform3fv(program.uniform("lightColor"),1, spotlight.color.data());
         if(mesh_V.cols()>0)
         {
             mesh_VBO.bind();
             //for each mesh
-
-            //draw mesh elements
-            //TODO: vertex normals for shading calcs 
-
-                glEnableVertexAttribArray(1);
-                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+            for(unsigned i = 0; i<meshes.size(); i++)
+            {
+                //draw mesh elements
+                Vector3f color_gl = meshes[i].color/255;
+                glUniform3fv(program.uniform("meshColor"),1, color_gl.data());
 
                 glEnableVertexAttribArray(0);
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+
+                // glEnableVertexAttribArray(0);
+                // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
                 for(unsigned j=0; j<mesh_V.cols()/3; j++)
                 {
                     //draw triangles
                     glDrawArrays(GL_TRIANGLES, j*3, 3);
                 }
+            }
+  
         }
             
 

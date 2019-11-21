@@ -28,10 +28,17 @@ VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
+float near = 0.1;
+float far = 5.0;
+float l = -1.0;
+float r = 1.0;
+float t = 1.0;
+float b = -1.0;
 Matrix4f M_vp;
 Matrix4f M_orth;
 Matrix4f M_cam;
 Matrix4f P;
+Matrix4f M_model = Matrix<float, 4, 4>::Identity();
 
 // Contains the vertex positions of the lines and triangles
 MatrixXf line_V(5,1);
@@ -310,8 +317,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     0, height/2, 0, (height-1)/2,
     0, 0, 1, 0,
     0, 0, 0, 1;
-
-    cout << M_vp <<endl;
 }
 
 point screen_to_world(GLFWwindow* window)
@@ -565,7 +570,55 @@ int main(void)
 
     // Make the window's context current
     glfwMakeContextCurrent(window);
+    // Get the size of the window
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    M_vp << width/2, 0, 0, (width - 1)/2,
+    0, height/2, 0, (height-1)/2,
+    0, 0, 1, 0,
+    0, 0, 0, 1;
 
+    M_orth << 2/(r-l), 0, 0, -(r+l)/(r-l),
+    0, 2/(t-b), 0, -(t+b)/(t-b),
+    0, 0, 2/(near-far), -(near+far)/(near-far),
+    0, 0, 0, 1;
+
+    Vector3f eye_pos(0,0,1.2);
+    Vector3f gaze(0,0,-1.0);
+    Vector3f view_up(0,1,0);
+
+    Vector3f cam_u;
+    Vector3f cam_v;
+    Vector3f cam_w;
+
+    cam_w = -(gaze.normalized());
+    cam_u = view_up.cross(cam_w).normalized();
+    cam_v = cam_w.cross(cam_u);
+
+    Matrix4f R;
+    R << cam_u.coeff(0),cam_u.coeff(1),cam_u.coeff(2), 0,
+    cam_v.coeff(0),cam_v.coeff(1),cam_v.coeff(2), 0,
+    cam_w.coeff(0),cam_w.coeff(1),cam_w.coeff(2), 0,
+    0,0,0,1;
+
+    R.transpose();
+    
+
+    Matrix4f T;
+    T << 1, 0, 0, -eye_pos.coeff(0),
+    0, 1, 0, -eye_pos.coeff(1),
+    0, 0, 1, -eye_pos.coeff(2),
+    0, 0, 0, 1;
+
+    M_cam = R * T;
+
+    P << near, 0, 0, 0,
+    0, near, 0, 0,
+    0, 0, (near+far), -(far*near),
+    0, 0, 1, 0;
+
+    
+    
     #ifndef __APPLE__
       glewExperimental = true;
       GLenum err = glewInit();
@@ -617,11 +670,14 @@ int main(void)
     const GLchar* vertex_shader =
             "#version 330 core\n"
                     "layout(location=0) in vec3 position;"
+                    "uniform mat4 projMatrix;"
+                    "uniform mat4 camMatrix;"
+                    "uniform mat4 modelMatrix;"
                     "uniform mat2 scale;"
                     "uniform vec2 translation;"
                     "void main()"
                     "{"
-                    "    gl_Position = vec4(position, 1.0);"
+                    "    gl_Position = camMatrix * modelMatrix * vec4(position, 1.0);"
                     "}";
     const GLchar* fragment_shader =
             "#version 330 core\n"
@@ -660,6 +716,9 @@ int main(void)
         // Set the uniform view matrix and translation vectors
         glUniformMatrix2fv(program.uniform("scale"),1, GL_FALSE, view_scale.data());
         glUniform2fv(program.uniform("translation"),1, view_pos.data());
+        glUniformMatrix4fv(program.uniform("camMatrix"),1, GL_FALSE, M_cam.data());
+        glUniformMatrix4fv(program.uniform("modelMatrix"),1, GL_FALSE, M_model.data());
+        glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_orth.data());
         
         // Clear the framebuffer
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);

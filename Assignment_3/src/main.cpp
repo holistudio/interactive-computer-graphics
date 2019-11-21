@@ -12,9 +12,9 @@
 #include <GLFW/glfw3.h>
 #endif
 
-
 // Linear Algebra Library
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 using namespace Eigen;
 using namespace std;
 #include <chrono>
@@ -44,6 +44,15 @@ bool mouse_move = false;
 //View control variables that link to shader uniforms
 Matrix2f view_scale;
 Vector2f view_pos;
+
+//Light Class
+class light
+{
+    public:
+        Vector3f position;
+        Vector3f color;
+};
+
 
 // Container for tracking the triangle vertex positions and colors at each key frame of an animation
 Eigen::MatrixXf anim_tri_V(5,1);
@@ -116,9 +125,9 @@ class tri_mesh
     //basic triangular mesh
     public:
         //V is a matrix (dimension 6 x #V where #V is the number of vertices)
-        // contains the positions and colors of the vertices of the mesh TODO: normals as well
+        // contains the positions and normals of the vertices of the mesh 
         MatrixXf V;
-        //F is an matrix (dimension 3 x #F where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
+        //F is an matrix (dimension 6 x #F where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
         MatrixXf F;
         Vector3d color;
         char shader_type;
@@ -212,26 +221,75 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
 
         //vertices.resize(num_vertices,3);
         mesh_structure.V.resize(6,num_vertices);
-        mesh_structure.F.resize(3,num_faces);
+        mesh_structure.F.resize(6,num_faces);
 
 
+
+        //load matrix V with vertices
         for (unsigned i=0;i<num_vertices;i++)
         {
-            //load matrix V with vertices
             in.getline(str,255);
             substrings = space_sep_string(string(str));
             mesh_structure.V.col(i) << stof(substrings[0])*scale+position.coeff(0),
             stof(substrings[1])*scale+position.coeff(1),
             stof(substrings[2])*scale+position.coeff(2),
-            1.0f, 1.0f, 1.0f;
+            0.0f, 0.0f, 0.0f;
         }
 
+        //load matrix F with vertices of each face
         for (unsigned i=0;i<num_faces;i++)
         {
             in.getline(str,255);
             substrings = space_sep_string(string(str));
-            mesh_structure.F.col(i) << stoi(substrings[1]),stoi(substrings[2]),stoi(substrings[3]);
+            
+            //calculate face normals un-normalized
+            //which will weight the vertex normal average based on each face's area
+            Vector3f v1 = (mesh_structure.V.block(0,stoi(substrings[1]),3,1));
+            Vector3f v2 = (mesh_structure.V.block(0,stoi(substrings[2]),3,1));
+            Vector3f v3 = (mesh_structure.V.block(0,stoi(substrings[3]),3,1));
+
+            Vector3f face_normal = (v2-v1).cross(v3-v1);
+
+            mesh_structure.F.col(i) << stoi(substrings[1]),
+            stoi(substrings[2]),
+            stoi(substrings[3]),
+            0.0f, 0.0f, 0.0f;
+
+            for (unsigned j=0; j<face_normal.size(); j++)
+            {
+                mesh_structure.F.coeffRef(j+3,i) = face_normal.coeffRef(j);
+            }
+
         }
+        
+        //iterate through matrix V
+        for(unsigned i=0; i<mesh_structure.V.cols(); i++)
+        {
+            //for each face 
+            for(unsigned j=0; j<mesh_structure.F.cols(); j++)
+            {
+                //for each face vertex
+                for(unsigned k=0; k<3; k++)
+                {
+                    int face_vertex_index = int(mesh_structure.F.coeffRef(k,j));
+                    //if face vertex index == i
+                    if(face_vertex_index == i)
+                    {
+                        //add face normal to vertex normal
+                        mesh_structure.V.block(3,i,3,1) = mesh_structure.V.block(3,i,3,1) + mesh_structure.F.block(3,j,3,1);
+                    }
+
+                }
+            }
+            //normalize vertex (3,4,5);
+            Vector3f vertex_normal = mesh_structure.V.block(3,i,3,1);
+            vertex_normal = vertex_normal.normalized();
+            mesh_structure.V.block(3,i,3,1) << vertex_normal;
+        }
+        cout << mesh_structure.V << endl;
+        
+
+
         return mesh_structure;
     }
     else
@@ -429,6 +487,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     insert_start = mesh_V.cols(); 
                     mesh_V.conservativeResize(NoChange, mesh_V.cols()+cube.F.cols()*3); 
                 }
+
                 for(unsigned i=0; i<cube.F.cols();i++)
                 {
                     for(unsigned j=0; j<cube.F.rows();j++)
@@ -538,6 +597,10 @@ int main(void)
     // Initialize view scale and position
     view_scale << 1, 0, 0, 1;
     view_pos << 0, 0;
+
+    light spotlight;
+    spotlight.position << 0, 5.0, 5.0;
+    spotlight.color << 1.0, 1.0, 1.0;
 
     // Initialize the OpenGL Program
     Program program;

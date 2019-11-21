@@ -27,6 +27,12 @@ VertexBufferObject line_VBO;
 VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
+// Viewing Transformation Matrices
+Matrix4f M_vp;
+Matrix4f M_orth;
+Matrix4f M_cam;
+Matrix4f P;
+
 // Contains the vertex positions of the lines and triangles
 MatrixXf line_V(5,1);
 MatrixXf tri_V(5,1);
@@ -299,6 +305,13 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
+
+    M_vp << width/2, 0, 0, (width - 1)/2,
+    0, height/2, 0, (height-1)/2,
+    0, 0, 1, 0,
+    0, 0, 0, 1;
+
+    cout << M_vp <<endl;
 }
 
 point screen_to_world(GLFWwindow* window)

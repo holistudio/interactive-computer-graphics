@@ -324,6 +324,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     0, height/2, 0, (height-1)/2,
     0, 0, 1, 0,
     0, 0, 0, 1;
+
+    // M_vp << 2/width, 0, 0, 1,
+    // 0, 2/height, 0, 1,
+    // 0, 0, 1, 0,
+    // 0, 0, 0, 1;
 }
 
 point screen_to_world(GLFWwindow* window)
@@ -443,6 +448,39 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
     start_click << world_click.x, world_click.y;
 }
 
+Matrix4f camera_matrix(Vector3f eye_pos, Vector3f transl)
+{
+    eye_pos = eye_pos + transl;
+    Vector3f gaze=(Vector3f(0,0,0) - eye_pos).normalized();
+    Vector3f view_up(0,1,0);
+
+    Vector3f cam_u;
+    Vector3f cam_v;
+    Vector3f cam_w;
+
+    cam_w = -(gaze.normalized());
+    cam_u = view_up.cross(cam_w).normalized();
+    cam_v = cam_w.cross(cam_u);
+
+    Matrix4f R;
+    R << cam_u.coeff(0),cam_u.coeff(1),cam_u.coeff(2), 0,
+    cam_v.coeff(0),cam_v.coeff(1),cam_v.coeff(2), 0,
+    cam_w.coeff(0),cam_w.coeff(1),cam_w.coeff(2), 0,
+    0,0,0,1;
+
+    R.transposeInPlace();
+
+    Matrix4f T;
+    T << 1, 0, 0, -eye_pos.coeff(0),
+    0, 1, 0, -eye_pos.coeff(1),
+    0, 0, 1, -eye_pos.coeff(2),
+    0, 0, 0, 1;
+
+    Matrix4f camera = R * T;
+
+    return camera;
+}
+
 void removeColumn(MatrixXf& matrix, unsigned int colToRemove)
 {
     // Eigen matrix column remover function courtesy of https://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
@@ -519,6 +557,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
                 //update VBO
                 mesh_VBO.update(mesh_V);
+                break;
             }
             case GLFW_KEY_2:
             {
@@ -547,11 +586,29 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
                 //update VBO
                 mesh_VBO.update(mesh_V);
+                break;
             } 
             case GLFW_KEY_3:
             {
                 load_mesh("../data/bunny.off",Vector3d(0,0,0),1);
+                break;
             }
+            case  GLFW_KEY_W:
+
+                break;
+            case  GLFW_KEY_S:
+
+                break;
+            case  GLFW_KEY_A:
+ 
+                break;
+            case  GLFW_KEY_D:
+
+                break;
+            case  GLFW_KEY_Q:
+                break;
+            case  GLFW_KEY_Z:
+                break;
             default:
                 break;
         }
@@ -653,8 +710,15 @@ int main(void)
     spotlight.intensity << 1.0, 1.0, 1.0;
 
     //viewport transformation matrix
-    M_vp << width/2, 0, 0, (width - 1)/2,
-    0, height/2, 0, (height-1)/2,
+    // M_vp << width/2, 0, 0, (width-1)/2,
+    // 0, height/2, 0, (height-1)/2,
+    // 0, 0, 1, 0,
+    // 0, 0, 0, 1;
+
+    // M_vp = M_vp.inverse().eval();
+
+    M_vp << 2/width, 0, 0, 1,
+    0, 2/height, 0, 1,
     0, 0, 1, 0,
     0, 0, 0, 1;
 
@@ -672,32 +736,8 @@ int main(void)
 
     //camera view matrix
     Vector3f eye_pos(0,0,1.2);
-    Vector3f gaze(0,0,-1.0);
-    Vector3f view_up(0,1,0);
 
-    Vector3f cam_u;
-    Vector3f cam_v;
-    Vector3f cam_w;
-
-    cam_w = -(gaze.normalized());
-    cam_u = view_up.cross(cam_w).normalized();
-    cam_v = cam_w.cross(cam_u);
-
-    Matrix4f R;
-    R << cam_u.coeff(0),cam_u.coeff(1),cam_u.coeff(2), 0,
-    cam_v.coeff(0),cam_v.coeff(1),cam_v.coeff(2), 0,
-    cam_w.coeff(0),cam_w.coeff(1),cam_w.coeff(2), 0,
-    0,0,0,1;
-
-    R.transposeInPlace();
-
-    Matrix4f T;
-    T << 1, 0, 0, -eye_pos.coeff(0),
-    0, 1, 0, -eye_pos.coeff(1),
-    0, 0, 1, -eye_pos.coeff(2),
-    0, 0, 0, 1;
-
-    M_cam = R * T;
+    M_cam = camera_matrix(eye_pos,Vector3f(0,0,0));
 
     //model to world frame transformation matrix
     Matrix4f M_model = Matrix<float, 4, 4>::Identity();
@@ -706,7 +746,8 @@ int main(void)
     // cout << M_cam * M_model * test << endl;
     // cout << "---" << endl;
     // cout << M_orth * M_cam * M_model * test << endl;
-
+    // cout << "---" << endl;
+    // cout << M_vp * M_orth * M_cam * M_model * test << endl;
 
     Matrix4f M_comb = M_cam * M_model;
     Matrix4f M_normal = M_comb.inverse().transpose();
@@ -720,6 +761,7 @@ int main(void)
                     "out vec4 normal;"
                     "out vec3 halfVec;"
                     "out vec3 lightDir;"
+                    "uniform mat4 viewportMatrix;"
                     "uniform mat4 projMatrix;"
                     "uniform mat4 camMatrix;"
                     "uniform mat4 modelMatrix;"
@@ -785,6 +827,7 @@ int main(void)
         glUniform2fv(program.uniform("translation"),1, view_pos.data());
 
         //uniforms for transformation matrices
+        glUniformMatrix4fv(program.uniform("viewportMatrix"),1, GL_FALSE, M_vp.data());
         glUniformMatrix4fv(program.uniform("camMatrix"),1, GL_FALSE, M_cam.data());
         glUniformMatrix4fv(program.uniform("modelMatrix"),1, GL_FALSE, M_model.data());
         glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_orth.data());

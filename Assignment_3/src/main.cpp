@@ -38,7 +38,7 @@ Matrix4f M_vp;
 Matrix4f M_orth;
 Matrix4f M_cam;
 Matrix4f P;
-Matrix4f M_model = Matrix<float, 4, 4>::Identity();
+Matrix4f M_model;
 
 // Contains the vertex positions of the lines and triangles
 MatrixXf line_V(5,1);
@@ -64,6 +64,7 @@ class light
     public:
         Vector3f position;
         Vector3f color;
+        Vector3f intensity;
 };
 
 
@@ -142,8 +143,11 @@ class tri_mesh
         MatrixXf V;
         //F is an matrix (dimension 6 x #F where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
         MatrixXf F;
-        Vector3f color;
+        Vector3f diff_color;
+        Vector3f ka;
+        Vector3f ks;
         char shader_type;
+        float phong_exp;
         bool mirror=false;
 };
 
@@ -198,7 +202,10 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
 {
     // returns a triangule mesh object at the file path for the OFF file
     tri_mesh mesh_structure;
-    mesh_structure.color = Vector3f(255,255,255);
+    mesh_structure.diff_color = Vector3f(255,255,255);
+    mesh_structure.ka = mesh_structure.diff_color * .15;
+    mesh_structure.ks =  Vector3f(0.0,0.0,0.0);
+    mesh_structure.phong_exp = 1.0;
     mesh_structure.shader_type = 'd';
 
     // mesh vertices
@@ -573,52 +580,7 @@ int main(void)
     // Get the size of the window
     int width, height;
     glfwGetWindowSize(window, &width, &height);
-    M_vp << width/2, 0, 0, (width - 1)/2,
-    0, height/2, 0, (height-1)/2,
-    0, 0, 1, 0,
-    0, 0, 0, 1;
 
-    M_orth << 2/(r-l), 0, 0, -(r+l)/(r-l),
-    0, 2/(t-b), 0, -(t+b)/(t-b),
-    0, 0, 2/(near-far), -(near+far)/(near-far),
-    0, 0, 0, 1;
-
-    Vector3f eye_pos(0,0,1.2);
-    Vector3f gaze(0,0,-1.0);
-    Vector3f view_up(0,1,0);
-
-    Vector3f cam_u;
-    Vector3f cam_v;
-    Vector3f cam_w;
-
-    cam_w = -(gaze.normalized());
-    cam_u = view_up.cross(cam_w).normalized();
-    cam_v = cam_w.cross(cam_u);
-
-    Matrix4f R;
-    R << cam_u.coeff(0),cam_u.coeff(1),cam_u.coeff(2), 0,
-    cam_v.coeff(0),cam_v.coeff(1),cam_v.coeff(2), 0,
-    cam_w.coeff(0),cam_w.coeff(1),cam_w.coeff(2), 0,
-    0,0,0,1;
-
-    R.transpose();
-    
-
-    Matrix4f T;
-    T << 1, 0, 0, -eye_pos.coeff(0),
-    0, 1, 0, -eye_pos.coeff(1),
-    0, 0, 1, -eye_pos.coeff(2),
-    0, 0, 0, 1;
-
-    M_cam = R * T;
-
-    P << near, 0, 0, 0,
-    0, near, 0, 0,
-    0, 0, (near+far), -(far*near),
-    0, 0, 1, 0;
-
-    
-    
     #ifndef __APPLE__
       glewExperimental = true;
       GLenum err = glewInit();
@@ -664,29 +626,104 @@ int main(void)
     light spotlight;
     spotlight.position << 0, 5.0, 5.0;
     spotlight.color << 1.0, 1.0, 1.0;
+    spotlight.intensity << 1.0, 1.0, 1.0;
+
+    //viewport transformation matrix
+    M_vp << width/2, 0, 0, (width - 1)/2,
+    0, height/2, 0, (height-1)/2,
+    0, 0, 1, 0,
+    0, 0, 0, 1;
+
+    //orthographic projection matrix
+    M_orth << 2/(r-l), 0, 0, -(r+l)/(r-l),
+    0, 2/(t-b), 0, -(t+b)/(t-b),
+    0, 0, 2/(near-far), -(near+far)/(near-far),
+    0, 0, 0, 1;
+
+    //perspective project matrix
+    P << near, 0, 0, 0,
+    0, near, 0, 0,
+    0, 0, (near+far), -(far*near),
+    0, 0, 1, 0;
+
+    //camera view matrix
+    Vector3f eye_pos(0,0,1.2);
+    Vector3f gaze(0,0,-1.0);
+    Vector3f view_up(0,1,0);
+
+    Vector3f cam_u;
+    Vector3f cam_v;
+    Vector3f cam_w;
+
+    cam_w = -(gaze.normalized());
+    cam_u = view_up.cross(cam_w).normalized();
+    cam_v = cam_w.cross(cam_u);
+
+    Matrix4f R;
+    R << cam_u.coeff(0),cam_u.coeff(1),cam_u.coeff(2), 0,
+    cam_v.coeff(0),cam_v.coeff(1),cam_v.coeff(2), 0,
+    cam_w.coeff(0),cam_w.coeff(1),cam_w.coeff(2), 0,
+    0,0,0,1;
+
+    R.transposeInPlace();
+
+    Matrix4f T;
+    T << 1, 0, 0, -eye_pos.coeff(0),
+    0, 1, 0, -eye_pos.coeff(1),
+    0, 0, 1, -eye_pos.coeff(2),
+    0, 0, 0, 1;
+
+    M_cam = R * T;
+
+    //model to world frame transformation matrix
+    Matrix4f M_model = Matrix<float, 4, 4>::Identity();
+
+    Matrix4f M_comb = M_cam * M_model;
+    Matrix4f M_normal = M_comb.inverse().transpose();
 
     // Initialize the OpenGL Program
     Program program;
     const GLchar* vertex_shader =
             "#version 330 core\n"
                     "layout(location=0) in vec3 position;"
+                    "layout(location=1) in vec3 inNormal;"
+                    "out vec4 normal;"
+                    "out vec3 halfVec;"
+                    "out vec3 lightDir;"
                     "uniform mat4 projMatrix;"
                     "uniform mat4 camMatrix;"
                     "uniform mat4 modelMatrix;"
+                    "uniform mat4 normalMatrix;"
                     "uniform mat2 scale;"
                     "uniform vec2 translation;"
+                    "uniform vec3 lightPosition;"
                     "void main()"
                     "{"
-                    "    gl_Position = camMatrix * modelMatrix * vec4(position, 1.0);"
+                    "    vec4 pos = camMatrix * modelMatrix * vec4(position, 1.0);"
+                    "    vec4 lightPos = camMatrix * vec4(lightPosition, 1.0);"
+                    "    normal = normalMatrix * vec4(inNormal, 0.0);"
+                    "    vec3 v = normalize(-pos.xyz);"
+                    "    lightDir = normalize(lightPos.xyz - pos.xyz);"
+                    "    halfVec = normalize(v + lightDir);"
+                    "    gl_Position = pos;"
                     "}";
     const GLchar* fragment_shader =
             "#version 330 core\n"
-                    "uniform vec3 meshColor;"
-                    "uniform vec3 lightColor;"
+                    "in vec4 normal;"
+                    "in vec3 halfVec;"
+                    "in vec3 lightDir;"
+                    "uniform vec3 lightIntensity;"
+                    "uniform vec3 Ia;"
+                    "uniform vec3 ka, kd, ks;"
+                    "uniform float phongExp;"
                     "out vec4 fragmentColor;"
                     "void main()"
                     "{"
-                    "    fragmentColor = vec4(lightColor * meshColor, 1.0);"
+                    "    vec3 n = normalize(normal.xyz);"
+                    "    vec3 h = normalize(halfVec);"
+                    "    vec3 l = normalize(lightDir);"
+                    "    vec3 intensity = ka * Ia + kd * lightIntensity * max(0.0, dot(n,l)) + ks * lightIntensity * pow(max(0.0,dot(n,h)),phongExp);"
+                    "    fragmentColor = vec4(intensity, 1.0);"
                     "}";
 
     // Compile the two shaders and upload the binary to the GPU
@@ -716,30 +753,43 @@ int main(void)
         // Set the uniform view matrix and translation vectors
         glUniformMatrix2fv(program.uniform("scale"),1, GL_FALSE, view_scale.data());
         glUniform2fv(program.uniform("translation"),1, view_pos.data());
+
+        //uniforms for transformation matrices
         glUniformMatrix4fv(program.uniform("camMatrix"),1, GL_FALSE, M_cam.data());
         glUniformMatrix4fv(program.uniform("modelMatrix"),1, GL_FALSE, M_model.data());
         glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_orth.data());
+        glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
         
+        // glUniform3fv(program.uniform("lightColor"),1, spotlight.color.data());
+        glUniform3fv(program.uniform("lightPosition"),1, spotlight.position.data());
+        glUniform3fv(program.uniform("lightIntensity"),1, spotlight.intensity.data());
+        Vector3f ambient_intensity(1.0,1.0,1.0);
+        glUniform3fv(program.uniform("Ia"),1,ambient_intensity.data());
+
+
         // Clear the framebuffer
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUniform3fv(program.uniform("lightColor"),1, spotlight.color.data());
-        if(mesh_V.cols()>0)
+        if(mesh_V.cols()>1)
         {
             mesh_VBO.bind();
             //for each mesh
             for(unsigned i = 0; i<meshes.size(); i++)
             {
                 //draw mesh elements
-                Vector3f color_gl = meshes[i].color/255;
-                glUniform3fv(program.uniform("meshColor"),1, color_gl.data());
+                Vector3f color_gl = meshes[i].diff_color/255;
+                Vector3f ka_gl = meshes[i].ka/255;
+                glUniform3fv(program.uniform("kd"),1, color_gl.data());
+                glUniform3fv(program.uniform("ka"),1, ka_gl.data());
+                glUniform3fv(program.uniform("ks"),1, meshes[i].ks.data());
+                glUniform1f(program.uniform("phongExp"), meshes[i].phong_exp);
 
                 glEnableVertexAttribArray(0);
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
 
-                // glEnableVertexAttribArray(0);
-                // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
+                glEnableVertexAttribArray(1);
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
                 for(unsigned j=0; j<mesh_V.cols()/3; j++)
                 {
                     //draw triangles

@@ -19,6 +19,7 @@ using namespace Eigen;
 using namespace std;
 #include <chrono>
 #include <iostream>
+#include <cmath>
 #include <fstream>
 #include <limits>
 
@@ -28,19 +29,22 @@ VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
-float near = -0.1;
-float far = -5.0;
+float near = -1;
+float far = -5;
 float l = -1.0;
 float r = 1.0;
 float t = 1.0;
 float b = -1.0;
 Matrix4f M_vp;
+
 Matrix4f M_orth;
-Matrix4f M_cam;
 Matrix4f P;
+Matrix4f M_proj;
+
+Matrix4f M_cam;
 Matrix4f M_model;
 
-Vector3f eye_pos(0,0,1.2);
+Vector3f eye_pos(0,0,1.5);
 
 // Contains the vertex positions of the lines and triangles
 MatrixXf line_V(5,1);
@@ -531,6 +535,20 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     {
         switch (key)
         {
+            case GLFW_KEY_P:
+            {
+                //perspective projection matrix
+                M_proj << 2*abs(near)/(r-l), 0, (r+l)/(r-l), 0,
+                0, abs(near)*2/(t-b), (t+b)/(t-b), 0,
+                0, 0, (abs(near)+abs(far))/(abs(near)-abs(far)), 2*abs(far)*abs(near)/(abs(near)-abs(far)),
+                0, 0, -1, 0;
+                break; 
+            }
+            case GLFW_KEY_O:
+            {
+                M_proj= M_orth;
+                break; 
+            }
             case GLFW_KEY_1:
             {                
                 tri_mesh cube = load_mesh("../data/cube.off",Vector3d(0,0,0),1);
@@ -737,23 +755,31 @@ int main(void)
     0, 0, 0, 1;
 
     //perspective project matrix
-    P << near, 0, 0, 0,
-    0, near, 0, 0,
-    0, 0, (near+far), -(far*near),
-    0, 0, 1, 0;
+    // P << near, 0, 0, 0,
+    // 0, near, 0, 0,
+    // 0, 0, near+far, -far*near,
+    // 0, 0, -1, 0;
 
+    P << 2*abs(near)/(r-l), 0, (r+l)/(r-l), 0,
+                0, abs(near)*2/(t-b), (t+b)/(t-b), 0,
+                0, 0, (abs(near)+abs(far))/(abs(near)-abs(far)), 2*abs(far)*abs(near)/(abs(near)-abs(far)),
+                0, 0, -1, 0;
+
+    M_proj = M_orth;
     //camera view matrix
     M_cam = camera_matrix(eye_pos);
 
     //model to world frame transformation matrix
     Matrix4f M_model = Matrix<float, 4, 4>::Identity();
 
-    // Vector4f test(1.0,0.0,0.0,1.0);
-    // cout << M_cam * M_model * test << endl;
-    // cout << "---" << endl;
-    // cout << M_orth * M_cam * M_model * test << endl;
-    // cout << "---" << endl;
-    // cout << M_vp * M_orth * M_cam * M_model * test << endl;
+    Vector4f test(0.5,0.0,0.0,1.0);
+    cout << M_cam * M_model * test << endl;
+    cout << "---" << endl;
+    cout << M_orth * M_cam * M_model * test << endl;
+    cout << "---" << endl;
+    Vector4f persp_test =  P * M_cam * M_model * test;
+    persp_test = persp_test / persp_test.coeff(3);
+    cout << persp_test << endl;
 
     Matrix4f M_comb = M_cam * M_model;
     Matrix4f M_normal = M_comb.inverse().transpose();
@@ -836,7 +862,7 @@ int main(void)
         glUniformMatrix4fv(program.uniform("viewportMatrix"),1, GL_FALSE, M_vp.data());
         glUniformMatrix4fv(program.uniform("camMatrix"),1, GL_FALSE, M_cam.data());
         glUniformMatrix4fv(program.uniform("modelMatrix"),1, GL_FALSE, M_model.data());
-        glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_orth.data());
+        glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_proj.data());
         glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
         
         // glUniform3fv(program.uniform("lightColor"),1, spotlight.color.data());

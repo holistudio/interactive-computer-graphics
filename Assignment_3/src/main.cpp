@@ -40,6 +40,8 @@ Matrix4f M_cam;
 Matrix4f P;
 Matrix4f M_model;
 
+Vector3f eye_pos(0,0,1.2);
+
 // Contains the vertex positions of the lines and triangles
 MatrixXf line_V(5,1);
 MatrixXf tri_V(5,1);
@@ -448,10 +450,9 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
     start_click << world_click.x, world_click.y;
 }
 
-Matrix4f camera_matrix(Vector3f eye_pos, Vector3f transl)
+Matrix4f camera_matrix(Vector3f eye_pos)
 {
-    eye_pos = eye_pos + transl;
-    Vector3f gaze=(Vector3f(0,0,0) - eye_pos).normalized();
+    Vector3f gaze=(Vector3f(0,0,0) - eye_pos);
     Vector3f view_up(0,1,0);
 
     Vector3f cam_u;
@@ -594,20 +595,27 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
             }
             case  GLFW_KEY_W:
-
-                break;
+                eye_pos = eye_pos - 0.1*Vector3f::UnitZ();
+                M_cam = camera_matrix(eye_pos);
             case  GLFW_KEY_S:
-
+                eye_pos = eye_pos + 0.1*Vector3f::UnitZ();
+                M_cam = camera_matrix(eye_pos);
                 break;
             case  GLFW_KEY_A:
- 
+                eye_pos = eye_pos - 0.1*Vector3f::UnitX();
+                M_cam = camera_matrix(eye_pos);
                 break;
             case  GLFW_KEY_D:
-
+                eye_pos = eye_pos + 0.1*Vector3f::UnitX();
+                M_cam = camera_matrix(eye_pos);
                 break;
             case  GLFW_KEY_Q:
+                eye_pos = eye_pos + 0.1*Vector3f::UnitY();
+                M_cam = camera_matrix(eye_pos);
                 break;
             case  GLFW_KEY_Z:
+                eye_pos = eye_pos - 0.1*Vector3f::UnitY();
+                M_cam = camera_matrix(eye_pos);
                 break;
             default:
                 break;
@@ -735,9 +743,7 @@ int main(void)
     0, 0, 1, 0;
 
     //camera view matrix
-    Vector3f eye_pos(0,0,1.2);
-
-    M_cam = camera_matrix(eye_pos,Vector3f(0,0,0));
+    M_cam = camera_matrix(eye_pos);
 
     //model to world frame transformation matrix
     Matrix4f M_model = Matrix<float, 4, 4>::Identity();

@@ -522,7 +522,31 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case GLFW_KEY_2:
             {
-                load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),1);
+                tri_mesh cube = load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),0.1);
+                meshes.push_back(cube);
+                int insert_start;
+                if(mesh_V.cols()==1)
+                {
+                    insert_start = 0;
+                    mesh_V.conservativeResize(NoChange, cube.F.cols()*3);
+                }
+                else
+                {
+                    insert_start = mesh_V.cols(); 
+                    mesh_V.conservativeResize(NoChange, mesh_V.cols()+cube.F.cols()*3); 
+                }
+
+                for(unsigned i=0; i<cube.F.cols();i++)
+                {
+                    for(unsigned j=0; j<3;j++)
+                    {
+                        mesh_V.col(insert_start) << cube.V.col((int)cube.F.coeffRef(j,i));
+                        insert_start++;
+                    }
+                }
+
+                //update VBO
+                mesh_VBO.update(mesh_V);
             } 
             case GLFW_KEY_3:
             {

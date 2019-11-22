@@ -28,8 +28,8 @@ VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
-float near = 0.1;
-float far = 5.0;
+float near = -0.1;
+float far = -5.0;
 float l = -1.0;
 float r = 1.0;
 float t = 1.0;
@@ -678,6 +678,12 @@ int main(void)
     //model to world frame transformation matrix
     Matrix4f M_model = Matrix<float, 4, 4>::Identity();
 
+    // Vector4f test(1.0,0.0,0.0,1.0);
+    // cout << M_cam * M_model * test << endl;
+    // cout << "---" << endl;
+    // cout << M_orth * M_cam * M_model * test << endl;
+
+
     Matrix4f M_comb = M_cam * M_model;
     Matrix4f M_normal = M_comb.inverse().transpose();
 
@@ -705,7 +711,7 @@ int main(void)
                     "    vec3 v = normalize(-pos.xyz);"
                     "    lightDir = normalize(lightPos.xyz - pos.xyz);"
                     "    halfVec = normalize(v + lightDir);"
-                    "    gl_Position = pos;"
+                    "    gl_Position = projMatrix * pos;"
                     "}";
     const GLchar* fragment_shader =
             "#version 330 core\n"

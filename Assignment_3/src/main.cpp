@@ -212,7 +212,7 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
     mesh_structure.ka = mesh_structure.diff_color * .15;
     mesh_structure.ks =  Vector3f(0.0,0.0,0.0);
     mesh_structure.phong_exp = 1.0;
-    mesh_structure.shader_type = 'w';
+    mesh_structure.shader_type = 'p';
 
     // mesh vertices
     int num_vertices;
@@ -798,17 +798,20 @@ int main(void)
                     "uniform mat4 camMatrix;"
                     "uniform mat4 modelMatrix;"
                     "uniform mat4 normalMatrix;"
+                    "uniform int shaderMode;"
                     "uniform mat2 scale;"
                     "uniform vec2 translation;"
                     "uniform vec3 lightPosition;"
                     "void main()"
                     "{"
                     "    vec4 pos = camMatrix * modelMatrix * vec4(position, 1.0);"
-                    "    vec4 lightPos = camMatrix * vec4(lightPosition, 1.0);"
-                    "    normal = normalMatrix * vec4(inNormal, 0.0);"
-                    "    vec3 v = normalize(-pos.xyz);"
-                    "    lightDir = normalize(lightPos.xyz - pos.xyz);"
-                    "    halfVec = normalize(v + lightDir);"
+                    "    if(shaderMode != 0){"
+                    "       vec4 lightPos = camMatrix * vec4(lightPosition, 1.0);"
+                    "       normal = normalMatrix * vec4(inNormal, 0.0);"
+                    "       vec3 v = normalize(-pos.xyz);"
+                    "       lightDir = normalize(lightPos.xyz - pos.xyz);"
+                    "       halfVec = normalize(v + lightDir);"
+                    "    }"
                     "    gl_Position = projMatrix * pos;"
                     "}";
     const GLchar* fragment_shader =
@@ -824,7 +827,7 @@ int main(void)
                     "out vec4 fragmentColor;"
                     "void main()"
                     "{"
-                    "    if (shaderMode == 0) {"
+                    "    if (shaderMode == 2) {"
                     "       vec3 n = normalize(normal.xyz);"
                     "       vec3 h = normalize(halfVec);"
                     "       vec3 l = normalize(lightDir);"
@@ -832,7 +835,9 @@ int main(void)
                     "       fragmentColor = vec4(intensity, 1.0);"
                     "    }"
                     "    else {"
-                    "       fragmentColor = vec4(kd, 1.0);"
+                    "       if(shaderMode == 0){"
+                    "           fragmentColor = vec4(kd, 1.0);"
+                    "       }"
                     "    }"
                     "}";
 
@@ -896,7 +901,7 @@ int main(void)
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
                 if(meshes[i].shader_type == 'p')
                 {
-                    glUniform1i(program.uniform("shaderMode"),0);
+                    glUniform1i(program.uniform("shaderMode"),2);
                     Vector3f ka_gl = meshes[i].ka/255;
                     glUniform3fv(program.uniform("kd"),1, color_gl.data());
                     glUniform3fv(program.uniform("ka"),1, ka_gl.data());
@@ -908,7 +913,7 @@ int main(void)
                 }
                 else if (meshes[i].shader_type == 'w')
                 {
-                    glUniform1i(program.uniform("shaderMode"),1);
+                    glUniform1i(program.uniform("shaderMode"),0);
                     glUniform3fv(program.uniform("kd"),1, color_gl.data());
                 }
                 for(unsigned j=0; j<mesh_V.cols()/3; j++)

@@ -30,7 +30,7 @@ VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
 float near = -1;
-float far = -5;
+float far = -4;
 float l = -1.0;
 float r = 1.0;
 float t = 1.0;
@@ -212,7 +212,7 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
     mesh_structure.ka = mesh_structure.diff_color * .15;
     mesh_structure.ks =  Vector3f(0.0,0.0,0.0);
     mesh_structure.phong_exp = 1.0;
-    mesh_structure.shader_type = 'd';
+    mesh_structure.shader_type = 'p';
 
     // mesh vertices
     int num_vertices;
@@ -829,6 +829,26 @@ int main(void)
                     "    vec3 intensity = ka * Ia + kd * lightIntensity * max(0.0, dot(n,l)) + ks * lightIntensity * pow(max(0.0,dot(n,h)),phongExp);"
                     "    fragmentColor = vec4(intensity, 1.0);"
                     "}";
+    const GLchar* wire_vertex_shader =
+            "#version 330 core\n"
+                    "layout(location=0) in vec3 position;"
+                    "uniform mat4 viewportMatrix;"
+                    "uniform mat4 projMatrix;"
+                    "uniform mat4 camMatrix;"
+                    "uniform mat4 modelMatrix;"
+                    "uniform mat4 normalMatrix;"
+                    "void main()"
+                    "{"
+                    "    vec4 pos = camMatrix * modelMatrix * vec4(position, 1.0);"
+                    "    gl_Position = projMatrix * pos;"
+                    "}";
+    const GLchar* wire_fragment_shader =
+            "#version 150 core\n"
+                    "uniform vec3 kd;"
+                    "void main()"
+                    "{"
+                    "    fragmentColor = vec4(kd, 1.0);"
+                    "}";
 
     // Compile the two shaders and upload the binary to the GPU
     program.init(vertex_shader,fragment_shader,"fragmentColor");
@@ -884,21 +904,32 @@ int main(void)
             {
                 //draw mesh elements
                 Vector3f color_gl = meshes[i].diff_color/255;
-                Vector3f ka_gl = meshes[i].ka/255;
-                glUniform3fv(program.uniform("kd"),1, color_gl.data());
-                glUniform3fv(program.uniform("ka"),1, ka_gl.data());
-                glUniform3fv(program.uniform("ks"),1, meshes[i].ks.data());
-                glUniform1f(program.uniform("phongExp"), meshes[i].phong_exp);
-
+                
                 glEnableVertexAttribArray(0);
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+                if(meshes[i].shader_type == 'p')
+                {
+                    Vector3f ka_gl = meshes[i].ka/255;
+                    glUniform3fv(program.uniform("kd"),1, color_gl.data());
+                    glUniform3fv(program.uniform("ka"),1, ka_gl.data());
+                    glUniform3fv(program.uniform("ks"),1, meshes[i].ks.data());
+                    glUniform1f(program.uniform("phongExp"), meshes[i].phong_exp);
 
-                glEnableVertexAttribArray(1);
-                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
+                    glEnableVertexAttribArray(1);
+                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
+                }
                 for(unsigned j=0; j<mesh_V.cols()/3; j++)
                 {
                     //draw triangles
-                    glDrawArrays(GL_TRIANGLES, j*3, 3);
+                    if(meshes[i].shader_type == 'w')
+                    {
+                        glDrawArrays(GL_LINE_LOOP,j*3,3);
+                    }
+                    else
+                    {
+                        glDrawArrays(GL_TRIANGLES, j*3, 3);
+                    }
+                    
                 }
             }
   

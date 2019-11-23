@@ -598,6 +598,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                 start_click << world_click.x, world_click.y;
             }
         }
+        if(min_dist == numeric_limits<float>::infinity())
+        {
+            clicked_mesh.clicked_index = 0;
+            clicked_mesh.clicked = false;
+        }
     }
 }
 
@@ -974,7 +979,14 @@ int main(void)
             {
                 //draw mesh elements
                 Vector3f color_gl = meshes[i].diff_color/255;
-                glUniform3fv(program.uniform("kd"),1, color_gl.data());
+                if(clicked_mesh.clicked && clicked_mesh.clicked_index == i)
+                {
+                    glUniform3fv(program.uniform("kd"),1, Vector3f(0,0,1).data());
+                }
+                else
+                {
+                    glUniform3fv(program.uniform("kd"),1, color_gl.data());
+                }
                 
                 glEnableVertexAttribArray(0);
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);

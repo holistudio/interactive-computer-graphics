@@ -655,15 +655,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 int main(void)
 {
     // add color palette to colors vector
-    colors.push_back(color(0.0f,0.0f,1.0f));
-    colors.push_back(color(0.0f,float(195./255.),1.0f));
-    colors.push_back(color(0.0f,1.0f,float(187./255.)));
-    colors.push_back(color(float(149./255.),1.0f,0.));
-    colors.push_back(color(1.0f,float(242./255.),0.));
-    colors.push_back(color(1.0f,float(106./255.),0.));
-    colors.push_back(color(1.0f,0.,float(81./255.)));
-    colors.push_back(color(1.0f,0.,float(234./255.)));
-    colors.push_back(color(float(140./255.),0.,float(227./255.)));
+
 
     GLFWwindow* window;
 
@@ -864,7 +856,10 @@ int main(void)
 
     // Update viewport
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
+    
+    // glEnable(GL_DEPTH_TEST);
+    // glDepthFunc(GL_LESS);
+    
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
@@ -894,7 +889,9 @@ int main(void)
 
         // Clear the framebuffer
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
         glClear(GL_COLOR_BUFFER_BIT);
+        //TODO: glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_TEST);
 
         if(mesh_V.cols()>1)
         {
@@ -924,7 +921,7 @@ int main(void)
                 {
                     glUniform1i(program.uniform("shaderMode"),0);
                 }
-                
+
                 for(unsigned j=0; j<mesh_V.cols()/3; j++)
                 {
                     //draw triangles

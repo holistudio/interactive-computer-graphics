@@ -154,7 +154,7 @@ class tri_mesh
         Vector3f ks;
         char shader_type;
         float phong_exp;
-        bool mirror=false;
+        float bound_radius;
 };
 
 // global variable for storing the clicked triangle's properties
@@ -212,7 +212,7 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
     mesh_structure.ka = mesh_structure.diff_color * .15;
     mesh_structure.ks =  Vector3f(0.0,0.0,0.0);
     mesh_structure.phong_exp = 1.0;
-    mesh_structure.shader_type = 'f';
+    mesh_structure.shader_type = 'p';
 
     // mesh vertices
     int num_vertices;
@@ -574,15 +574,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     }
                 }
 
-                insert_start = 0;
-                for(unsigned i=0; i < cube.F.cols();i++)
-                {
-                    for(unsigned j=0; j<3;j++)
-                    {
-                        mesh_V.block(3,insert_start,3,1) = cube.F.block(3,i,3,1);
-                        insert_start++;
-                    }
-                }
+                // insert_start = 0;
+                // for(unsigned i=0; i < cube.F.cols();i++)
+                // {
+                //     for(unsigned j=0; j<3;j++)
+                //     {
+                //         mesh_V.block(3,insert_start,3,1) = cube.F.block(3,i,3,1);
+                //         insert_start++;
+                //     }
+                // }
 
                 //update VBO
                 mesh_VBO.update(mesh_V);
@@ -733,7 +733,7 @@ int main(void)
     view_pos << 0, 0;
 
     light spotlight;
-    spotlight.position << 0, 5.0, 5.0;
+    spotlight.position << 0, 1, -1.0;
     spotlight.color << 1.0, 1.0, 1.0;
     spotlight.intensity << 1.0, 1.0, 1.0;
 
@@ -774,14 +774,14 @@ int main(void)
     //model to world frame transformation matrix
     Matrix4f M_model = Matrix<float, 4, 4>::Identity();
 
-    Vector4f test(0.5,0.0,0.0,1.0);
-    cout << M_cam * M_model * test << endl;
-    cout << "---" << endl;
-    cout << M_orth * M_cam * M_model * test << endl;
-    cout << "---" << endl;
-    Vector4f persp_test =  P * M_cam * M_model * test;
-    persp_test = persp_test / persp_test.coeff(3);
-    cout << persp_test << endl;
+    // Vector4f test(0.5,0.0,0.0,1.0);
+    // cout << M_cam * M_model * test << endl;
+    // cout << "---" << endl;
+    // cout << M_orth * M_cam * M_model * test << endl;
+    // cout << "---" << endl;
+    // Vector4f persp_test =  P * M_cam * M_model * test;
+    // persp_test = persp_test / persp_test.coeff(3);
+    // cout << persp_test << endl;
 
     Matrix4f M_comb = M_cam * M_model;
     Matrix4f M_normal = M_comb.inverse().transpose();
@@ -857,9 +857,9 @@ int main(void)
     // Update viewport
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     
-    // glEnable(GL_DEPTH_TEST);
-    // glDepthFunc(GL_LESS);
-    
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
@@ -890,8 +890,8 @@ int main(void)
         // Clear the framebuffer
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-        glClear(GL_COLOR_BUFFER_BIT);
-        //TODO: glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_TEST);
+        //glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         if(mesh_V.cols()>1)
         {

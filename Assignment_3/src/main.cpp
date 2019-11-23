@@ -29,8 +29,8 @@ VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
-float near = -0.5;
-float far = -5;
+float near = -1;
+float far = -3;
 float l = -1.0;
 float r = 1.0;
 float t = 1.0;
@@ -57,7 +57,7 @@ char mode = ' ';
 bool animation_mode = false;
 
 // variables for tracking mouse states
-Vector2f start_click;
+Vector3f start_click;
 int click_count = 0;
 bool mouse_move = false;
 
@@ -114,15 +114,18 @@ class point
     public:
         float x;
         float y;
+        float z;
         point()
         {
             x=0.0;
             y=0.0;
+            z=0.0;
         }
-        point(float x1, float y1)
+        point(float x1, float y1, float z1)
         {
             x = x1;
             y = y1;
+            z = z1;
         }
 };
 
@@ -402,13 +405,17 @@ point screen_to_world(GLFWwindow* window)
     // Get the position of the mouse in the window
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
+    //printf("===\n%f, %f\n---\n", xpos, ypos);
 
     // Get the size of the window
     int width, height;
     glfwGetWindowSize(window, &width, &height);
-    // Convert screen position to world coordinates
+
+    // Convert screen position to canonical
     double xworld = ((xpos/double(width))*2)-1;
     double yworld = (((height-1-ypos)/double(height))*2)-1; 
+    double zworld = 0;
+    //printf("%f, %f\n---\n", xworld, yworld);
 
     // adjust position accounting for view controls
     // Matrix2f inv_scale;
@@ -417,13 +424,15 @@ point screen_to_world(GLFWwindow* window)
     Vector4f adj_pos;
     adj_pos << float(xworld), float(yworld), 0, 1;
     // adj_pos = inv_scale * adj_pos - view_pos;
-
+    Matrix4f inv_proj = M_proj.inverse().eval();
     Matrix4f inv_cam = M_cam.inverse().eval();
-    adj_pos = inv_cam * adj_pos;
+    adj_pos = inv_cam * inv_proj * adj_pos;
+    //printf("%f, %f\n===\n", adj_pos.coeff(0), adj_pos.coeff(1),adj_pos.coeff(2));
 
-    xworld = double(adj_pos.coeff(0));
-    yworld = double(adj_pos.coeff(1));
-    return point(xworld, yworld);
+    xworld = adj_pos.coeff(0);
+    yworld = adj_pos.coeff(1);
+    zworld = adj_pos.coeff(2);
+    return point(xworld, yworld, zworld);
 }
 
 hit_sphere ray_hit_sphere(ray r, double t_lower, sphere test_sphere)
@@ -512,7 +521,7 @@ void transform_triangle(GLFWwindow* window, tri_mesh sel_triangle, Matrix2f tran
 
     // update starting position of the triangle to where the current mouse cursor is
     point world_click = screen_to_world(window);
-    start_click << world_click.x, world_click.y;
+    start_click << world_click.x, world_click.y, world_click.z;
 }
 
 Matrix4f camera_matrix(Vector3f eye_pos)
@@ -568,16 +577,16 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     if(clicked_mesh.clicked)
     {
         //set current mouse position to vector mouse_pos
-        Vector2f mouse_pos;
-        mouse_pos << world_click.x, world_click.y;
+        Vector3f mouse_pos;
+        mouse_pos << world_click.x, world_click.y, world_click.z;
 
         //calculated difference btw start_click and mouse_pos
-        Vector2f tr = mouse_pos - start_click;
+        Vector3f tr = mouse_pos - start_click;
 
         Matrix4f translation;
         translation << 0, 0, 0, tr.coeff(0),
         0, 0, 0, tr.coeff(1),
-        0, 0, 0, 0,
+        0, 0, 0, tr.coeff(2),
         0, 0, 0, 0;
 
         // int insert_start = 0;
@@ -589,7 +598,7 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
         //translate all vertices of the clicked mesh
 
         clicked_mesh.M_model = clicked_mesh.M_model + translation;
-        cout << clicked_mesh.M_model << endl;
+        //cout << clicked_mesh.M_model << endl;
         meshes[clicked_mesh.clicked_index] = clicked_mesh;
 
 
@@ -607,8 +616,17 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
         ray click_ray;
-        click_ray.e << world_click.x,world_click.y,eye_pos.coeff(2);
+        click_ray.e << world_click.x,world_click.y,world_click.z;
         click_ray.d << 0,0,-1;
+
+        Vector4f d_hom;
+        d_hom << click_ray.d, 0;
+        Matrix4f inv_proj = M_proj.inverse().eval();
+        Matrix4f inv_cam = M_cam.inverse().eval();
+        d_hom = inv_cam * inv_proj * d_hom;
+        click_ray.d << (d_hom.head(3)).normalized();
+        cout<< click_ray.d <<endl;
+
         float min_dist = numeric_limits<float>::infinity(); 
         for(unsigned i=0; i<meshes.size(); i++)
         {
@@ -626,7 +644,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     clicked_mesh.clicked = true;
                     cout<< "Clicked!" <<endl;
                 }
-                start_click << world_click.x, world_click.y;
+                start_click << world_click.x, world_click.y, world_click.z;
             }
         }
         if(min_dist == numeric_limits<float>::infinity())
@@ -653,6 +671,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 0, abs(near)*2/(t-b), (t+b)/(t-b), 0,
                 0, 0, (abs(near)+abs(far))/(abs(near)-abs(far)), 2*abs(far)*abs(near)/(abs(near)-abs(far)),
                 0, 0, -1, 0;
+
+                // M_proj << 2*near/(r-l), 0, (l+r)/(l-r), 0,
+                // 0, near*2/(t-b), (b+t)/(b-t), 0,
+                // 0, 0, (near+far)/(near-far), 2*far*near/(near-far),
+                // 0, 0, 1, 0;
+
+                // cout<< M_proj <<endl;
+
+                // M_proj = M_orth * P ;
+                // cout<< M_proj <<endl;
                 break; 
             }
             case GLFW_KEY_O:
@@ -871,12 +899,12 @@ int main(void)
     // P << near, 0, 0, 0,
     // 0, near, 0, 0,
     // 0, 0, near+far, -far*near,
-    // 0, 0, -1, 0;
+    // 0, 0, 1, 0;
 
-    P << 2*abs(near)/(r-l), 0, (r+l)/(r-l), 0,
-                0, abs(near)*2/(t-b), (t+b)/(t-b), 0,
-                0, 0, (abs(near)+abs(far))/(abs(near)-abs(far)), 2*abs(far)*abs(near)/(abs(near)-abs(far)),
-                0, 0, -1, 0;
+    // P << 2*abs(near)/(r-l), 0, (r+l)/(r-l), 0,
+    //             0, abs(near)*2/(t-b), (t+b)/(t-b), 0,
+    //             0, 0, (abs(near)+abs(far))/(abs(near)-abs(far)), 2*abs(far)*abs(near)/(abs(near)-abs(far)),
+    //             0, 0, -1, 0;
 
     M_proj = M_orth;
     //camera view matrix
@@ -884,12 +912,12 @@ int main(void)
 
     
 
-    // Vector4f test(0.5,0.0,0.0,1.0);
-    // cout << M_cam * M_model * test << endl;
+    // Vector4f test(1.0,1.0,-1.5,1.0);
+    // cout << M_cam * test << endl;
     // cout << "---" << endl;
-    // cout << M_orth * M_cam * M_model * test << endl;
+    // cout << M_orth * M_cam * test << endl;
     // cout << "---" << endl;
-    // Vector4f persp_test =  P * M_cam * M_model * test;
+    // Vector4f persp_test =   M_orth * P * M_cam * test;
     // persp_test = persp_test / persp_test.coeff(3);
     // cout << persp_test << endl;
 

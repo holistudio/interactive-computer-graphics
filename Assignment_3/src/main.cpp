@@ -155,6 +155,7 @@ class tri_mesh
         char shader_type;
         float phong_exp;
         float bound_radius;
+        Vector3f bound_center;
 };
 
 // global variable for storing the clicked triangle's properties
@@ -288,9 +289,24 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
 
         }
         
+        mesh_structure.bound_center << 0,0,0;
+        
+
         //iterate through matrix V
         for(unsigned i=0; i<mesh_structure.V.cols(); i++)
         {
+            for(unsigned j=0; j<3; j++)
+            {
+                mesh_structure.bound_center.coeffRef(j)+=mesh_structure.V.coeffRef(j,i);
+            }
+            
+            // for(unsigned j=0; j<maxDim.size(); j++)
+            // {
+            //     if(abs(mesh_structure.V.coeffRef(j,i))>maxDim.coeff(j))
+            //     {
+            //         maxDim.coeffRef(j)=abs(mesh_structure.V.coeffRef(j,i));
+            //     }
+            // }
             //for each face 
             for(unsigned j=0; j<mesh_structure.F.cols(); j++)
             {
@@ -312,6 +328,21 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
             vertex_normal = vertex_normal.normalized();
             mesh_structure.V.block(3,i,3,1) << vertex_normal;
         }
+
+        mesh_structure.bound_center = mesh_structure.bound_center / num_vertices;
+        mesh_structure.bound_radius = 0.0;
+
+        for(unsigned i=0; i<mesh_structure.V.cols(); i++)
+        {
+            Vector3f vertex = mesh_structure.V.block(0,i,3,1);
+            float cand_radius = (vertex - mesh_structure.bound_center).norm();
+            if(cand_radius > mesh_structure.bound_radius)
+            {
+                mesh_structure.bound_radius = cand_radius;
+            }
+        }
+        cout << mesh_structure.bound_center << endl;
+        cout << mesh_structure.bound_radius << endl;
         return mesh_structure;
     }
     else

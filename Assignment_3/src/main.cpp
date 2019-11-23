@@ -156,10 +156,32 @@ class tri_mesh
         float phong_exp;
         float bound_radius;
         Vector3f bound_center;
+        bool clicked = false; // tracks whether the mesh is selected
+        int clicked_index; //start index on meshes vector
+};
+
+class ray
+{
+    public:
+        Vector3f e;
+        Vector3f d;
+};
+class sphere
+{
+    public:
+        Vector3f center;
+        double radius;
+};
+
+class hit_sphere
+{
+    public:
+        bool hit = false;
+        double t;
+        sphere hit_obj;
 };
 
 // global variable for storing the clicked triangle's properties
-triangle clicked_triangle;
 tri_mesh clicked_mesh;
 
 // global variable for storing the clicked vertex's index position in tri_V
@@ -205,7 +227,7 @@ vector<string> space_sep_string(string line)
     return substrings;
 }
 
-tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
+tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
 {
     // returns a triangule mesh object at the file path for the OFF file
     tri_mesh mesh_structure;
@@ -398,38 +420,50 @@ point screen_to_world(GLFWwindow* window)
     return point(xworld, yworld);
 }
 
-bool click_triangle(point click_point, triangle test_triangle)
+hit_sphere ray_hit_sphere(ray r, double t_lower, sphere test_sphere)
 {
-    // Given a click point and a triangle
-    // return whether click point is inside triangle
-    // using barycentric coordinates
+    hit_sphere test;
+    const double sphere_radius = test_sphere.radius;
+    Vector3f sphere_center = test_sphere.center;
 
-    point a = test_triangle.v[0];
-    point b = test_triangle.v[1];
-    point c = test_triangle.v[2];
-    float ya_minus_yb = a.y - b.y;
-    float xb_minus_xa = b.x - a.x;
-    float xayb_minus_xbya = a.x*b.y - b.x*a.y;
-    float ya_minus_yc = a.y - c.y;
-    float xc_minus_xa = c.x - a.x;
-    float xayc_minus_xcya = a.x*c.y - c.x*a.y;
+    //Calculate discriminant
+    Vector3f e_c = r.e - sphere_center;
+    //quadratic equation
+    double a = r.d.dot(r.d);
+    double b = r.d.dot(e_c);
+    double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
 
-    float gamma = (ya_minus_yb*click_point.x + xb_minus_xa*click_point.y + xayb_minus_xbya) / (ya_minus_yb*c.x + xb_minus_xa*c.y + xayb_minus_xbya);
-    
-    if(gamma < 1 && gamma >=0)
+    //discriminant
+    double discriminant = b*b - a*c;
+
+    if(discriminant>=0)
     {
-        float beta = (ya_minus_yc*click_point.x + xc_minus_xa*click_point.y + xayc_minus_xcya) / (ya_minus_yc*b.x + xc_minus_xa*b.y + xayc_minus_xcya);
-        if(beta < 1 && beta >=0)
+        test.hit = true;
+        test.hit_obj = test_sphere;
+        //if discriminant is greater than or equal to 0
+        //Calculate sphere intersection parameter, test.t
+        if(discriminant ==0)
         {
-            float alpha = 1-beta-gamma;
-            if(alpha < 1 && alpha >0)
+            test.t = -b/a;
+        }
+        else
+        {
+            test.t = (-b - sqrt(discriminant)) / a;
+            if(test.t < 0)
             {
-                return true;
+                test.t = (-b + sqrt(discriminant)) / a;
             }
-            
+            else
+            {
+                double t2 = (-b + sqrt(discriminant)) / a;
+                if (t2>0 && t2<test.t)
+                {
+                    test.t = t2;
+                }
+            }
         }
     }
-    return false;
+    return test;
 }
 
 void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f transform)
@@ -466,16 +500,6 @@ void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f tran
     // update matrices and VBOs
     // line vertices and VBO are also updated
     // given the transformed triangle is selected with a white border
-    for(unsigned i = 0; i<new_vertices.size(); i++)
-    {
-        clicked_triangle.v[i].x = new_vertices[i].coeff(0);
-        clicked_triangle.v[i].y = new_vertices[i].coeff(1);
-        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(0) = new_vertices[i].coeff(0);
-        tri_V.col(clicked_triangle.clicked_index+i).coeffRef(1) = new_vertices[i].coeff(1);
-        line_V.col(i) << tri_V.col(clicked_triangle.clicked_index+i).coeff(0),
-                                        tri_V.col(clicked_triangle.clicked_index+i).coeff(1), 
-                                        1.0,1.0,1.0;
-    }
 
     tri_VBO.update(tri_V);
     line_VBO.update(line_V);
@@ -551,10 +575,28 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     // When left mouse button is pressed
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
     {
-        switch (mode)
+        ray click_ray;
+        click_ray.e << world_click.x,world_click.y,eye_pos.coeff(2);
+        click_ray.d << 0,0,-1;
+        float min_dist = numeric_limits<float>::infinity(); 
+        for(unsigned i=0; i<meshes.size(); i++)
         {
-            default:
-                break;
+            sphere test_sphere;
+            test_sphere.center = meshes[i].bound_center;
+            test_sphere.radius = meshes[i].bound_radius;
+            hit_sphere check = ray_hit_sphere(click_ray,0,test_sphere);
+            if(check.hit)
+            {
+                if(check.t < min_dist)
+                {
+                    min_dist = check.t;
+                    clicked_mesh = meshes[i];
+                    clicked_mesh.clicked_index = i;
+                    clicked_mesh.clicked = true;
+                    cout<< "Clicked!" <<endl;
+                }
+                start_click << world_click.x, world_click.y;
+            }
         }
     }
 }
@@ -582,7 +624,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case GLFW_KEY_1:
             {                
-                tri_mesh cube = load_mesh("../data/cube.off",Vector3d(0,0,0),1);
+                tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1);
                 meshes.push_back(cube);
                 int insert_start;
                 if(mesh_V.cols()==1)
@@ -621,7 +663,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case GLFW_KEY_2:
             {
-                tri_mesh cube = load_mesh("../data/bumpy_cube.off",Vector3d(0,0,0),0.1);
+                tri_mesh cube = load_mesh("../data/bumpy_cube.off",Vector3f(0,0,0),0.1);
                 meshes.push_back(cube);
                 int insert_start;
                 if(mesh_V.cols()==1)
@@ -650,7 +692,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             } 
             case GLFW_KEY_3:
             {
-                load_mesh("../data/bunny.off",Vector3d(0,0,0),1);
+                load_mesh("../data/bunny.off",Vector3f(0,0,0),1);
                 break;
             }
             case  GLFW_KEY_W:

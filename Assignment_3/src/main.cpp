@@ -42,7 +42,8 @@ Matrix4f P;
 Matrix4f M_proj;
 
 Matrix4f M_cam;
-Matrix4f M_model;
+Matrix4f M_comb;
+Matrix4f M_normal;
 
 Vector3f eye_pos(0,0,1.5);
 
@@ -56,7 +57,7 @@ char mode = ' ';
 bool animation_mode = false;
 
 // variables for tracking mouse states
-Vector2d start_click;
+Vector2f start_click;
 int click_count = 0;
 bool mouse_move = false;
 
@@ -149,6 +150,7 @@ class tri_mesh
         MatrixXf V;
         //F is an matrix (dimension 6 x #F where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
         MatrixXf F;
+        Matrix4f M_model;
         Vector3f diff_color;
         Vector3f ka;
         Vector3f ks;
@@ -236,6 +238,7 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
     mesh_structure.ks =  Vector3f(0.0,0.0,0.0);
     mesh_structure.phong_exp = 1.0;
     mesh_structure.shader_type = 'p';
+    mesh_structure.M_model = Matrix<float, 4, 4>::Identity();
 
     // mesh vertices
     int num_vertices;
@@ -408,12 +411,15 @@ point screen_to_world(GLFWwindow* window)
     double yworld = (((height-1-ypos)/double(height))*2)-1; 
 
     // adjust position accounting for view controls
-    Matrix2f inv_scale;
-    inv_scale << 1/view_scale.coeff(0,0),0,0,1/view_scale.coeff(1,1);
+    // Matrix2f inv_scale;
+    // inv_scale << 1/view_scale.coeff(0,0),0,0,1/view_scale.coeff(1,1);
     
-    Vector2f adj_pos;
-    adj_pos << float(xworld), float(yworld);
-    adj_pos = inv_scale * adj_pos - view_pos;
+    Vector4f adj_pos;
+    adj_pos << float(xworld), float(yworld), 0, 1;
+    // adj_pos = inv_scale * adj_pos - view_pos;
+
+    Matrix4f inv_cam = M_cam.inverse().eval();
+    adj_pos = inv_cam * adj_pos;
 
     xworld = double(adj_pos.coeff(0));
     yworld = double(adj_pos.coeff(1));
@@ -466,7 +472,7 @@ hit_sphere ray_hit_sphere(ray r, double t_lower, sphere test_sphere)
     return test;
 }
 
-void transform_triangle(GLFWwindow* window, triangle sel_triangle, Matrix2f transform)
+void transform_triangle(GLFWwindow* window, tri_mesh sel_triangle, Matrix2f transform)
 {
     // Given a triangle and a transformation matrix,
     // compute transformed coordinates of its vertices
@@ -559,10 +565,35 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
     // Get mouse cursor position
     point world_click = screen_to_world(window);
 
-    switch (mode)
+    if(clicked_mesh.clicked)
     {
-        default:
-            break;
+        //set current mouse position to vector mouse_pos
+        Vector2f mouse_pos;
+        mouse_pos << world_click.x, world_click.y;
+
+        //calculated difference btw start_click and mouse_pos
+        Vector2f tr = mouse_pos - start_click;
+
+        Matrix4f translation;
+        translation << 0, 0, 0, tr.coeff(0),
+        0, 0, 0, tr.coeff(1),
+        0, 0, 0, 0,
+        0, 0, 0, 0;
+
+        // int insert_start = 0;
+        // for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
+        // {
+        //     insert_start+= meshes[i].F.cols()*3;
+        // }
+        
+        //translate all vertices of the clicked mesh
+
+        clicked_mesh.M_model = clicked_mesh.M_model + translation;
+        cout << clicked_mesh.M_model << endl;
+        meshes[clicked_mesh.clicked_index] = clicked_mesh;
+
+
+        // mesh_VBO.update(mesh_V);
     }
     
 }
@@ -603,6 +634,8 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             clicked_mesh.clicked_index = 0;
             clicked_mesh.clicked = false;
         }
+
+ 
     }
 }
 
@@ -849,8 +882,7 @@ int main(void)
     //camera view matrix
     M_cam = camera_matrix(eye_pos);
 
-    //model to world frame transformation matrix
-    Matrix4f M_model = Matrix<float, 4, 4>::Identity();
+    
 
     // Vector4f test(0.5,0.0,0.0,1.0);
     // cout << M_cam * M_model * test << endl;
@@ -860,9 +892,6 @@ int main(void)
     // Vector4f persp_test =  P * M_cam * M_model * test;
     // persp_test = persp_test / persp_test.coeff(3);
     // cout << persp_test << endl;
-
-    Matrix4f M_comb = M_cam * M_model;
-    Matrix4f M_normal = M_comb.inverse().transpose();
 
     // Initialize the OpenGL Program
     Program program;
@@ -953,9 +982,9 @@ int main(void)
         //uniforms for transformation matrices
         glUniformMatrix4fv(program.uniform("viewportMatrix"),1, GL_FALSE, M_vp.data());
         glUniformMatrix4fv(program.uniform("camMatrix"),1, GL_FALSE, M_cam.data());
-        glUniformMatrix4fv(program.uniform("modelMatrix"),1, GL_FALSE, M_model.data());
+
         glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_proj.data());
-        glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
+        
         
         //light uniforms
         glUniform3fv(program.uniform("lightPosition"),1, spotlight.position.data());
@@ -977,6 +1006,12 @@ int main(void)
             //for each mesh
             for(unsigned i = 0; i<meshes.size(); i++)
             {
+                M_comb = M_cam * meshes[i].M_model;
+                M_normal = M_comb.inverse().transpose();
+
+                glUniformMatrix4fv(program.uniform("modelMatrix"),1, GL_FALSE, meshes[i].M_model.data());
+                glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
+
                 //draw mesh elements
                 Vector3f color_gl = meshes[i].diff_color/255;
                 if(clicked_mesh.clicked && clicked_mesh.clicked_index == i)

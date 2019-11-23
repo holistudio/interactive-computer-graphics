@@ -29,8 +29,8 @@ VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
-float near = -1;
-float far = -4;
+float near = -0.5;
+float far = -5;
 float l = -1.0;
 float r = 1.0;
 float t = 1.0;
@@ -212,7 +212,7 @@ tri_mesh load_mesh(string off_filepath, Vector3d position, double scale)
     mesh_structure.ka = mesh_structure.diff_color * .15;
     mesh_structure.ks =  Vector3f(0.0,0.0,0.0);
     mesh_structure.phong_exp = 1.0;
-    mesh_structure.shader_type = 'p';
+    mesh_structure.shader_type = 'w';
 
     // mesh vertices
     int num_vertices;
@@ -817,37 +817,23 @@ int main(void)
                     "in vec3 halfVec;"
                     "in vec3 lightDir;"
                     "uniform vec3 lightIntensity;"
+                    "uniform int shaderMode;"
                     "uniform vec3 Ia;"
                     "uniform vec3 ka, kd, ks;"
                     "uniform float phongExp;"
                     "out vec4 fragmentColor;"
                     "void main()"
                     "{"
-                    "    vec3 n = normalize(normal.xyz);"
-                    "    vec3 h = normalize(halfVec);"
-                    "    vec3 l = normalize(lightDir);"
-                    "    vec3 intensity = ka * Ia + kd * lightIntensity * max(0.0, dot(n,l)) + ks * lightIntensity * pow(max(0.0,dot(n,h)),phongExp);"
-                    "    fragmentColor = vec4(intensity, 1.0);"
-                    "}";
-    const GLchar* wire_vertex_shader =
-            "#version 330 core\n"
-                    "layout(location=0) in vec3 position;"
-                    "uniform mat4 viewportMatrix;"
-                    "uniform mat4 projMatrix;"
-                    "uniform mat4 camMatrix;"
-                    "uniform mat4 modelMatrix;"
-                    "uniform mat4 normalMatrix;"
-                    "void main()"
-                    "{"
-                    "    vec4 pos = camMatrix * modelMatrix * vec4(position, 1.0);"
-                    "    gl_Position = projMatrix * pos;"
-                    "}";
-    const GLchar* wire_fragment_shader =
-            "#version 150 core\n"
-                    "uniform vec3 kd;"
-                    "void main()"
-                    "{"
-                    "    fragmentColor = vec4(kd, 1.0);"
+                    "    if (shaderMode == 0) {"
+                    "       vec3 n = normalize(normal.xyz);"
+                    "       vec3 h = normalize(halfVec);"
+                    "       vec3 l = normalize(lightDir);"
+                    "       vec3 intensity = ka * Ia + kd * lightIntensity * max(0.0, dot(n,l)) + ks * lightIntensity * pow(max(0.0,dot(n,h)),phongExp);"
+                    "       fragmentColor = vec4(intensity, 1.0);"
+                    "    }"
+                    "    else {"
+                    "       fragmentColor = vec4(kd, 1.0);"
+                    "    }"
                     "}";
 
     // Compile the two shaders and upload the binary to the GPU
@@ -885,12 +871,13 @@ int main(void)
         glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_proj.data());
         glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
         
-        // glUniform3fv(program.uniform("lightColor"),1, spotlight.color.data());
+        //light uniforms
         glUniform3fv(program.uniform("lightPosition"),1, spotlight.position.data());
         glUniform3fv(program.uniform("lightIntensity"),1, spotlight.intensity.data());
         Vector3f ambient_intensity(1.0,1.0,1.0);
         glUniform3fv(program.uniform("Ia"),1,ambient_intensity.data());
 
+        glUniform1i(program.uniform("shaderMode"),0);
 
         // Clear the framebuffer
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -909,6 +896,7 @@ int main(void)
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
                 if(meshes[i].shader_type == 'p')
                 {
+                    glUniform1i(program.uniform("shaderMode"),0);
                     Vector3f ka_gl = meshes[i].ka/255;
                     glUniform3fv(program.uniform("kd"),1, color_gl.data());
                     glUniform3fv(program.uniform("ka"),1, ka_gl.data());
@@ -917,6 +905,11 @@ int main(void)
 
                     glEnableVertexAttribArray(1);
                     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
+                }
+                else if (meshes[i].shader_type == 'w')
+                {
+                    glUniform1i(program.uniform("shaderMode"),1);
+                    glUniform3fv(program.uniform("kd"),1, color_gl.data());
                 }
                 for(unsigned j=0; j<mesh_V.cols()/3; j++)
                 {

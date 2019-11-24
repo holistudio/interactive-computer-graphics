@@ -639,6 +639,14 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
  
     }
+    else
+    {
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
+        {
+            clicked_mesh.clicked = false;
+            clicked_mesh.clicked_index = 0;
+        }
+    }
 }
 
 void mesh_V_update(tri_mesh new_mesh)

@@ -156,7 +156,7 @@ class tri_mesh
         Matrix4f M_model;
         Vector3f diff_color;
         Vector3f ka;
-        Vector3f ks;
+        float ks;
         char shader_type;
         float phong_exp;
         float bound_radius;
@@ -238,9 +238,9 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
     tri_mesh mesh_structure;
     mesh_structure.diff_color = Vector3f(255,255,255);
     mesh_structure.ka = mesh_structure.diff_color * .15;
-    mesh_structure.ks =  Vector3f(0.0,0.0,0.0);
-    mesh_structure.phong_exp = 1.0;
-    mesh_structure.shader_type = 'p';
+    mesh_structure.ks =  0.5;
+    mesh_structure.phong_exp = 32;
+    mesh_structure.shader_type = 'f';
     mesh_structure.M_model = Matrix<float, 4, 4>::Identity();
 
     // mesh vertices
@@ -369,8 +369,8 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
                 mesh_structure.bound_radius = cand_radius;
             }
         }
-        cout << mesh_structure.bound_center << endl;
-        cout << mesh_structure.bound_radius << endl;
+        // cout << mesh_structure.bound_center << endl;
+        // cout << mesh_structure.bound_radius << endl;
         return mesh_structure;
     }
     else
@@ -713,15 +713,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     }
                 }
 
-                // insert_start = 0;
-                // for(unsigned i=0; i < cube.F.cols();i++)
-                // {
-                //     for(unsigned j=0; j<3;j++)
-                //     {
-                //         mesh_V.block(3,insert_start,3,1) = cube.F.block(3,i,3,1);
-                //         insert_start++;
-                //     }
-                // }
+                //vertex normals equal to face normals
+                insert_start = 0;
+                for(unsigned i=0; i < cube.F.cols();i++)
+                {
+                    for(unsigned j=0; j<3;j++)
+                    {
+                        mesh_V.block(3,insert_start,3,1) = cube.F.block(3,i,3,1);
+                        insert_start++;
+                    }
+                }
 
                 //update VBO
                 mesh_VBO.update(mesh_V);
@@ -786,6 +787,33 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
             default:
                 break;
+        }
+        if(clicked_mesh.clicked)
+        {
+            switch (key)
+            {
+                case  GLFW_KEY_J:
+                {
+                    clicked_mesh.shader_type = 'w';
+                    
+                    meshes[clicked_mesh.clicked_index].shader_type = 'w';
+                    break;
+                }
+                case  GLFW_KEY_K:
+                {
+                    clicked_mesh.shader_type = 'f';
+                    meshes[clicked_mesh.clicked_index].shader_type = 'f';
+                    break;
+                }
+                case  GLFW_KEY_L:
+                {
+                    clicked_mesh.shader_type = 'p';
+                    meshes[clicked_mesh.clicked_index].shader_type = 'p';
+                    break;
+                }
+                default:
+                    break;
+            }
         }
 
     }
@@ -959,7 +987,9 @@ int main(void)
                     "uniform vec3 lightIntensity;"
                     "uniform int shaderMode;"
                     "uniform vec3 Ia;"
-                    "uniform vec3 ka, kd, ks;"
+                    "uniform vec3 ka;"
+                    "uniform vec3 kd;"
+                    "uniform float ks;"
                     "uniform float phongExp;"
                     "out vec4 fragmentColor;"
                     "void main()"
@@ -968,11 +998,22 @@ int main(void)
                     "       fragmentColor = vec4(kd, 1.0);"
                     "    }"
                     "    else {"
+                    "       if(shaderMode == 1){"
+                    "       vec3 n = normalize(normal.xyz);"
+                    "       vec3 l = normalize(lightDir);"
+                    "       float diffuse =  max(0.0, dot(n,l));"
+                    "       vec3 intensity = ka * Ia + kd * lightIntensity * (diffuse);"
+                    "       fragmentColor = vec4(intensity, 1.0);"
+                    "       }"
+                    "       else{"
                     "       vec3 n = normalize(normal.xyz);"
                     "       vec3 h = normalize(halfVec);"
                     "       vec3 l = normalize(lightDir);"
-                    "       vec3 intensity = ka * Ia + kd * lightIntensity * max(0.0, dot(n,l)) + ks * lightIntensity * pow(max(0.0,dot(n,h)),phongExp);"
+                    "       float diffuse =  max(0.0, dot(n,l));"
+                    "       float specular = ks * pow(max(0.0,dot(n,h)),phongExp);"
+                    "       vec3 intensity = ka * Ia + kd * lightIntensity * (diffuse + specular);"
                     "       fragmentColor = vec4(intensity, 1.0);"
+                    "       }"
                     "    }"
                     "}";
 
@@ -1054,13 +1095,24 @@ int main(void)
                 glEnableVertexAttribArray(0);
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
 
-                if(meshes[i].shader_type == 'p' || meshes[i].shader_type == 'f')
+                if(meshes[i].shader_type == 'p')
                 {
                     glUniform1i(program.uniform("shaderMode"),2);
                     Vector3f ka_gl = meshes[i].ka/255;
                     glUniform3fv(program.uniform("ka"),1, ka_gl.data());
-                    glUniform3fv(program.uniform("ks"),1, meshes[i].ks.data());
+                    glUniform1f(program.uniform("ks"), 0.0);
                     glUniform1f(program.uniform("phongExp"), meshes[i].phong_exp);
+
+                    glEnableVertexAttribArray(1);
+                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
+                }
+                else if( meshes[i].shader_type == 'f')
+                {
+                    glUniform1i(program.uniform("shaderMode"),1);
+                    Vector3f ka_gl = meshes[i].ka/255;
+                    glUniform3fv(program.uniform("ka"),1, ka_gl.data());
+                    glUniform1f(program.uniform("ks"), 1.0);
+                    glUniform1f(program.uniform("phongExp"), 2);
 
                     glEnableVertexAttribArray(1);
                     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
@@ -1085,7 +1137,8 @@ int main(void)
                 }
                 if(meshes[i].shader_type == 'f')
                 {
-                    glUniform3fv(program.uniform("kd"),1, Vector3f(0,0,0).data());
+                    glUniform3fv(program.uniform("kd"),1, Vector3f(1,1,1).data());
+                    glUniform1i(program.uniform("shaderMode"),0);
                     for(unsigned j=0; j<mesh_V.cols()/3; j++)
                     {
                         glDrawArrays(GL_LINE_LOOP,j*3,3);

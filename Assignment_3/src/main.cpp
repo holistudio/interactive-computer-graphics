@@ -818,6 +818,24 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     mesh_VBO.update(mesh_V);
                     break;
                 }
+                case GLFW_KEY_SLASH:
+                {
+                    for(unsigned i = 0; i<3; i++)
+                    {
+                        meshes[clicked_mesh.clicked_index].M_model.coeffRef(i,i) = 
+                        meshes[clicked_mesh.clicked_index].M_model.coeffRef(i,i)*1.25;
+                    }
+                    break;
+                }
+                case GLFW_KEY_PERIOD:
+                {
+                    for(unsigned i = 0; i<3; i++)
+                    {
+                        meshes[clicked_mesh.clicked_index].M_model.coeffRef(i,i) = 
+                        meshes[clicked_mesh.clicked_index].M_model.coeffRef(i,i)*0.75;
+                    }
+                    break;
+                }
                 case GLFW_KEY_DELETE:
                 {
                     clicked_mesh.clicked = false;
@@ -834,6 +852,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
                     meshes.erase(meshes.begin()+clicked_mesh.clicked_index);
                     mesh_VBO.update(mesh_V);
+                    break;
                 }
                 case GLFW_KEY_BACKSPACE:
                 {
@@ -851,6 +870,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
                     meshes.erase(meshes.begin()+clicked_mesh.clicked_index);
                     mesh_VBO.update(mesh_V);
+                    break;
                 }
                 default:
                     break;

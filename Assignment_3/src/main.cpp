@@ -359,7 +359,7 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
                 mesh_structure.bound_radius = cand_radius;
             }
         }
-        // cout << mesh_structure.bound_center << endl;
+        cout << mesh_structure.bound_center << endl;
         cout << mesh_structure.bound_radius << endl;
         return mesh_structure;
     }
@@ -615,7 +615,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         Matrix4f inv_cam = M_cam.inverse().eval();
         d_hom = inv_cam * inv_proj * d_hom;
         click_ray.d << (d_hom.head(3)).normalized();
-        cout<< click_ray.d <<endl;
+        //cout<< click_ray.d <<endl;
 
         float min_dist = numeric_limits<float>::infinity(); 
         for(unsigned i=0; i<meshes.size(); i++)
@@ -716,7 +716,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case GLFW_KEY_2:
             {
-                tri_mesh cube = load_mesh("../data/bumpy_cube.off",Vector3f(0,0,0),0.1*0.5/0.4);
+                tri_mesh cube = load_mesh("../data/bumpy_cube.off",Vector3f(0,0,0),0.11343);
                 meshes.push_back(cube);
                 mesh_V_update(cube);
                 
@@ -726,7 +726,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             } 
             case GLFW_KEY_3:
             {
-                tri_mesh bunny = load_mesh("../data/bunny.off",Vector3f(0,0,0),5);
+                tri_mesh bunny = load_mesh("../data/bunny.off",Vector3f(0.120779,-0.405439,-0.0351582),5*0.86);
                 meshes.push_back(bunny);
                 mesh_V_update(bunny);
                 

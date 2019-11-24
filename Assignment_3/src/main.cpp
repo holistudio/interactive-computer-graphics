@@ -650,7 +650,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 void mesh_V_update(tri_mesh new_mesh)
 {
     int insert_start;
-    if(mesh_V.cols()==1)
+    if(mesh_V.cols()<2)
     {
         insert_start = 0;
         mesh_V.conservativeResize(NoChange, new_mesh.F.cols()*3);
@@ -821,6 +821,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 case GLFW_KEY_COMMA:
                 {
                     clicked_mesh.clicked = false;
+
                     int start = 0;
                     for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
                     {
@@ -831,6 +832,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                         removeColumn(mesh_V,start);
                     }
 
+                    meshes.erase(meshes.begin()+clicked_mesh.clicked_index);
                     mesh_VBO.update(mesh_V);
                 }
                 default:

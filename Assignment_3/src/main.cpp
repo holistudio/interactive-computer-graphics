@@ -363,8 +363,8 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
                 mesh_structure.bound_radius = cand_radius;
             }
         }
-        cout << mesh_structure.bound_center << endl;
-        cout << mesh_structure.bound_radius << endl;
+        // cout << mesh_structure.bound_center << endl;
+        // cout << mesh_structure.bound_radius << endl;
         return mesh_structure;
     }
     else
@@ -629,7 +629,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     clicked_mesh = meshes[i];
                     clicked_mesh.clicked_index = i;
                     clicked_mesh.clicked = true;
-                    cout<< "Clicked!" <<endl;
+                    cout<< i <<endl;
                 }
                 start_click << world_click.x, world_click.y, world_click.z;
                 
@@ -728,10 +728,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case GLFW_KEY_2:
             {
-                tri_mesh cube = load_mesh("../data/bumpy_cube.off",Vector3f(0,0,0),0.11343);
-                meshes.push_back(cube);
-                mesh_V_update(cube);
-                
+                tri_mesh cube2 = load_mesh("../data/bumpy_cube.off",Vector3f(0,0,0),0.11343);
+                meshes.push_back(cube2);
+                mesh_V_update(cube2);
+                cout << meshes.size() << endl;
                 //update VBO
                 mesh_VBO.update(mesh_V);
                 break;
@@ -1173,6 +1173,8 @@ int main(void)
         {
             mesh_VBO.bind();
             //for each mesh
+            long start = 0;
+                
             for(unsigned i = 0; i<meshes.size(); i++)
             {
                 M_comb = M_cam * meshes[i].M_model;
@@ -1193,7 +1195,7 @@ int main(void)
                 }
                 
                 glEnableVertexAttribArray(0);
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start));
 
                 if(meshes[i].shader_type == 'p')
                 {
@@ -1204,7 +1206,7 @@ int main(void)
                     glUniform1f(program.uniform("phongExp"), meshes[i].phong_exp);
 
                     glEnableVertexAttribArray(1);
-                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
+                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start+12));
                 }
                 else if( meshes[i].shader_type == 'f')
                 {
@@ -1213,14 +1215,14 @@ int main(void)
                     glUniform3fv(program.uniform("ka"),1, ka_gl.data());
 
                     glEnableVertexAttribArray(1);
-                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);
+                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start+12));
                 }
                 else if (meshes[i].shader_type == 'w')
                 {
                     glUniform1i(program.uniform("shaderMode"),0);
                 }
 
-                for(unsigned j=0; j<mesh_V.cols()/3; j++)
+                for(unsigned j=0; j<meshes[i].F.cols(); j++)
                 {
                     //draw triangles
                     if(meshes[i].shader_type == 'w')
@@ -1233,15 +1235,16 @@ int main(void)
                     }
                     
                 }
-                if(meshes[i].shader_type == 'f')
-                {
-                    glUniform3fv(program.uniform("kd"),1, Vector3f(1,1,1).data());
-                    glUniform1i(program.uniform("shaderMode"),0);
-                    for(unsigned j=0; j<mesh_V.cols()/3; j++)
-                    {
-                        glDrawArrays(GL_LINE_LOOP,j*3,3);
-                    }
-                }
+                // if(meshes[i].shader_type == 'f')
+                // {
+                //     glUniform3fv(program.uniform("kd"),1, Vector3f(1,1,1).data());
+                //     glUniform1i(program.uniform("shaderMode"),0);
+                //     for(unsigned j=0; j<mesh_V.cols()/3; j++)
+                //     {
+                //         glDrawArrays(GL_LINE_LOOP,j*3,3);
+                //     }
+                // }
+                start+= meshes[i].F.cols()*3;
             }
   
         }

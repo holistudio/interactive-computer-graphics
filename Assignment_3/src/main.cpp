@@ -647,6 +647,32 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     }
 }
 
+void mesh_V_update(tri_mesh new_mesh)
+{
+    int insert_start;
+    if(mesh_V.cols()==1)
+    {
+        insert_start = 0;
+        mesh_V.conservativeResize(NoChange, new_mesh.F.cols()*3);
+    }
+    else
+    {
+        insert_start = mesh_V.cols(); 
+        mesh_V.conservativeResize(NoChange, mesh_V.cols()+new_mesh.F.cols()*3); 
+    }
+
+    
+    for(unsigned i=0; i < new_mesh.F.cols();i++)
+    {
+        for(unsigned j=0; j<3;j++)
+        {
+            mesh_V.col(insert_start) << new_mesh.V.col((int)new_mesh.F.coeffRef(j,i));
+            //vertex normals equal to face normals
+            mesh_V.block(3,insert_start,3,1) = new_mesh.F.block(3,i,3,1);
+            insert_start++;
+        }
+    }
+}
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     //only perform action on key press, not key release
@@ -682,29 +708,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             {                
                 tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1);
                 meshes.push_back(cube);
-                int insert_start;
-                if(mesh_V.cols()==1)
-                {
-                    insert_start = 0;
-                    mesh_V.conservativeResize(NoChange, cube.F.cols()*3);
-                }
-                else
-                {
-                    insert_start = mesh_V.cols(); 
-                    mesh_V.conservativeResize(NoChange, mesh_V.cols()+cube.F.cols()*3); 
-                }
-
-                
-                for(unsigned i=0; i < cube.F.cols();i++)
-                {
-                    for(unsigned j=0; j<3;j++)
-                    {
-                        mesh_V.col(insert_start) << cube.V.col((int)cube.F.coeffRef(j,i));
-                        //vertex normals equal to face normals
-                        mesh_V.block(3,insert_start,3,1) = cube.F.block(3,i,3,1);
-                        insert_start++;
-                    }
-                }
+                mesh_V_update(cube);
 
                 //update VBO
                 mesh_VBO.update(mesh_V);
@@ -714,28 +718,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             {
                 tri_mesh cube = load_mesh("../data/bumpy_cube.off",Vector3f(0,0,0),0.1);
                 meshes.push_back(cube);
-                int insert_start;
-                if(mesh_V.cols()==1)
-                {
-                    insert_start = 0;
-                    mesh_V.conservativeResize(NoChange, cube.F.cols()*3);
-                }
-                else
-                {
-                    insert_start = mesh_V.cols(); 
-                    mesh_V.conservativeResize(NoChange, mesh_V.cols()+cube.F.cols()*3); 
-                }
-
-                for(unsigned i=0; i<cube.F.cols();i++)
-                {
-                    for(unsigned j=0; j<3;j++)
-                    {
-                        mesh_V.col(insert_start) << cube.V.col((int)cube.F.coeffRef(j,i));
-                        //vertex normals equal to face normals
-                        mesh_V.block(3,insert_start,3,1) = cube.F.block(3,i,3,1);
-                        insert_start++;
-                    }
-                }
+                mesh_V_update(cube);
                 
                 //update VBO
                 mesh_VBO.update(mesh_V);

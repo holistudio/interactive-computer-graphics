@@ -818,6 +818,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     mesh_VBO.update(mesh_V);
                     break;
                 }
+                case GLFW_KEY_COMMA:
+                {
+                    clicked_mesh.clicked = false;
+                    int start = 0;
+                    for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
+                    {
+                        start+= meshes[i].F.cols()*3;
+                    }
+                    for(unsigned i=0; i<clicked_mesh.F.cols()*3;i++)
+                    {
+                        removeColumn(mesh_V,start);
+                    }
+
+                    mesh_VBO.update(mesh_V);
+                }
                 default:
                     break;
             }

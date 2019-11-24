@@ -156,6 +156,7 @@ class tri_mesh
         //F is an matrix (dimension 6 x #F where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
         MatrixXf F;
         Matrix4f M_model;
+        Matrix4f M_model_clicked;
         Vector3f diff_color;
         Vector3f ka;
         float ks;
@@ -163,6 +164,7 @@ class tri_mesh
         float phong_exp;
         float bound_radius;
         Vector3f bound_center;
+        Vector3f bound_center_clicked;
         bool clicked = false; // tracks whether the mesh is selected
         int clicked_index; //start index on meshes vector
 };
@@ -581,12 +583,13 @@ void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
         
         //translate all vertices of the clicked mesh
 
-        clicked_mesh.M_model = clicked_mesh.M_model + translation;
+        clicked_mesh.M_model = clicked_mesh.M_model_clicked + translation;
+        clicked_mesh.bound_center = clicked_mesh.bound_center_clicked + tr;
         //cout << clicked_mesh.M_model << endl;
         meshes[clicked_mesh.clicked_index] = clicked_mesh;
 
+        // meshes[clicked_mesh.clicked_index].bound_center
 
-        // mesh_VBO.update(mesh_V);
     }
     
 }
@@ -629,6 +632,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
                     cout<< "Clicked!" <<endl;
                 }
                 start_click << world_click.x, world_click.y, world_click.z;
+                
             }
         }
         if(min_dist == numeric_limits<float>::infinity())
@@ -636,6 +640,12 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             clicked_mesh.clicked_index = 0;
             clicked_mesh.clicked = false;
         }
+        else
+        {
+            clicked_mesh.M_model_clicked = clicked_mesh.M_model;
+            clicked_mesh.bound_center_clicked << world_click.x, world_click.y, world_click.z;
+        }
+        
 
  
     }

@@ -1232,18 +1232,19 @@ int main(void)
                     else
                     {
                         glDrawArrays(GL_TRIANGLES, j*3, 3);
+
                     }
                     
                 }
-                // if(meshes[i].shader_type == 'f')
-                // {
-                //     glUniform3fv(program.uniform("kd"),1, Vector3f(1,1,1).data());
-                //     glUniform1i(program.uniform("shaderMode"),0);
-                //     for(unsigned j=0; j<mesh_V.cols()/3; j++)
-                //     {
-                //         glDrawArrays(GL_LINE_LOOP,j*3,3);
-                //     }
-                // }
+                if(meshes[i].shader_type == 'f')
+                {
+                    glUniform3fv(program.uniform("kd"),1, Vector3f(1,1,1).data());
+                    glUniform1i(program.uniform("shaderMode"),0);
+                    for(unsigned j=0; j<meshes[i].F.cols(); j++)
+                    {
+                        glDrawArrays(GL_LINE_LOOP,j*3,3);
+                    }
+                }
                 start+= meshes[i].F.cols()*3;
             }
   

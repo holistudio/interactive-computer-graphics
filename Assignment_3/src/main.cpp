@@ -22,6 +22,8 @@ using namespace std;
 #include <cmath>
 #include <fstream>
 #include <limits>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 // VertexBufferObject wrapper
 VertexBufferObject line_VBO;
@@ -29,7 +31,7 @@ VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
-float near = -1;
+float near = -0.5;
 float far = -3;
 float l = -1.0;
 float r = 1.0;
@@ -514,7 +516,7 @@ void transform_triangle(GLFWwindow* window, tri_mesh sel_triangle, Matrix2f tran
     start_click << world_click.x, world_click.y, world_click.z;
 }
 
-Matrix4f camera_matrix(Vector3f eye_pos)
+Matrix4f camera_matrix()
 {
     Vector3f gaze=(Vector3f(0,0,0) - eye_pos);
     Vector3f view_up(0,1,0);
@@ -527,21 +529,13 @@ Matrix4f camera_matrix(Vector3f eye_pos)
     cam_u = view_up.cross(cam_w).normalized();
     cam_v = cam_w.cross(cam_u);
 
-    Matrix4f R;
-    R << cam_u.coeff(0),cam_u.coeff(1),cam_u.coeff(2), 0,
-    cam_v.coeff(0),cam_v.coeff(1),cam_v.coeff(2), 0,
-    cam_w.coeff(0),cam_w.coeff(1),cam_w.coeff(2), 0,
+    Matrix4f camera;
+    camera << cam_u.coeff(0),cam_v.coeff(0),cam_w.coeff(0), eye_pos.coeff(0),
+    cam_u.coeff(1),cam_v.coeff(1),cam_w.coeff(1), eye_pos.coeff(1),
+    cam_u.coeff(2),cam_v.coeff(2),cam_w.coeff(2), eye_pos.coeff(2),
     0,0,0,1;
 
-    R.transposeInPlace();
-
-    Matrix4f T;
-    T << 1, 0, 0, -eye_pos.coeff(0),
-    0, 1, 0, -eye_pos.coeff(1),
-    0, 0, 1, -eye_pos.coeff(2),
-    0, 0, 0, 1;
-
-    Matrix4f camera = R * T;
+    camera = camera.inverse().eval();
 
     return camera;
 }
@@ -736,26 +730,26 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case  GLFW_KEY_W:
                 eye_pos = eye_pos - 0.1*Vector3f::UnitZ();
-                M_cam = camera_matrix(eye_pos);
+                M_cam = camera_matrix();
             case  GLFW_KEY_S:
                 eye_pos = eye_pos + 0.1*Vector3f::UnitZ();
-                M_cam = camera_matrix(eye_pos);
+                M_cam = camera_matrix();
                 break;
             case  GLFW_KEY_A:
                 eye_pos = eye_pos - 0.1*Vector3f::UnitX();
-                M_cam = camera_matrix(eye_pos);
+                M_cam = camera_matrix();
                 break;
             case  GLFW_KEY_D:
                 eye_pos = eye_pos + 0.1*Vector3f::UnitX();
-                M_cam = camera_matrix(eye_pos);
+                M_cam = camera_matrix();
                 break;
             case  GLFW_KEY_Q:
                 eye_pos = eye_pos + 0.1*Vector3f::UnitY();
-                M_cam = camera_matrix(eye_pos);
+                M_cam = camera_matrix();
                 break;
             case  GLFW_KEY_Z:
                 eye_pos = eye_pos - 0.1*Vector3f::UnitY();
-                M_cam = camera_matrix(eye_pos);
+                M_cam = camera_matrix();
                 break;
             default:
                 break;
@@ -1019,9 +1013,11 @@ int main(void)
     //             0, 0, (abs(near)+abs(far))/(abs(near)-abs(far)), 2*abs(far)*abs(near)/(abs(near)-abs(far)),
     //             0, 0, -1, 0;
 
+    glm::mat4 perspective_projection = glm::perspective(glm::radians(-45.0f), (float)width / (float)height, abs(near), abs(far));
+ 
     M_proj = M_orth;
     //camera view matrix
-    M_cam = camera_matrix(eye_pos);
+    M_cam = camera_matrix();
 
     
 
@@ -1138,6 +1134,7 @@ int main(void)
         glUniformMatrix4fv(program.uniform("camMatrix"),1, GL_FALSE, M_cam.data());
 
         glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_proj.data());
+        //glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, &perspective_projection[0][0]);
         
         
         //light uniforms

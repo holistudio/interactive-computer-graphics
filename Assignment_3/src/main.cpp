@@ -836,6 +836,30 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     }
                     break;
                 }
+                case GLFW_KEY_SEMICOLON:
+                {
+                    float radians = -10 * 3.141592f / 180;
+                    Matrix4f rotation;
+                    rotation << cos(radians), sin(radians), 0, 0,
+                    -sin(radians), cos(radians), 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1;
+                    meshes[clicked_mesh.clicked_index].M_model=rotation * meshes[clicked_mesh.clicked_index].M_model;
+
+                    break;
+                }
+                case GLFW_KEY_APOSTROPHE:
+                {
+                    float radians = 10 * 3.141592f / 180;
+                    Matrix4f rotation;
+                    rotation << cos(radians), sin(radians), 0, 0,
+                    -sin(radians), cos(radians), 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1;
+                    meshes[clicked_mesh.clicked_index].M_model=rotation * meshes[clicked_mesh.clicked_index].M_model;
+
+                    break;
+                }
                 case GLFW_KEY_DELETE:
                 {
                     clicked_mesh.clicked = false;

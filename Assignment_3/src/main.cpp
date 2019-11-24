@@ -360,7 +360,7 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
             }
         }
         // cout << mesh_structure.bound_center << endl;
-        // cout << mesh_structure.bound_radius << endl;
+        cout << mesh_structure.bound_radius << endl;
         return mesh_structure;
     }
     else
@@ -716,7 +716,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case GLFW_KEY_2:
             {
-                tri_mesh cube = load_mesh("../data/bumpy_cube.off",Vector3f(0,0,0),0.1);
+                tri_mesh cube = load_mesh("../data/bumpy_cube.off",Vector3f(0,0,0),0.1*0.5/0.4);
                 meshes.push_back(cube);
                 mesh_V_update(cube);
                 
@@ -726,7 +726,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             } 
             case GLFW_KEY_3:
             {
-                load_mesh("../data/bunny.off",Vector3f(0,0,0),1);
+                tri_mesh bunny = load_mesh("../data/bunny.off",Vector3f(0,0,0),5);
+                meshes.push_back(bunny);
+                mesh_V_update(bunny);
+                
+                //update VBO
+                mesh_VBO.update(mesh_V);
                 break;
             }
             case  GLFW_KEY_W:

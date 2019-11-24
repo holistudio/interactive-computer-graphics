@@ -239,7 +239,7 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
     mesh_structure.diff_color = Vector3f(255,255,255);
     mesh_structure.ka = mesh_structure.diff_color * .15;
     mesh_structure.ks =  0.5;
-    mesh_structure.phong_exp = 32;
+    mesh_structure.phong_exp = 64;
     mesh_structure.shader_type = 'f';
     mesh_structure.M_model = Matrix<float, 4, 4>::Identity();
 
@@ -704,6 +704,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     mesh_V.conservativeResize(NoChange, mesh_V.cols()+cube.F.cols()*3); 
                 }
 
+                //vertex normals equal to average normal of all faces
                 for(unsigned i=0; i<cube.F.cols();i++)
                 {
                     for(unsigned j=0; j<3;j++)
@@ -752,7 +753,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                         insert_start++;
                     }
                 }
-
+                
                 //update VBO
                 mesh_VBO.update(mesh_V);
                 break;
@@ -803,12 +804,43 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 {
                     clicked_mesh.shader_type = 'f';
                     meshes[clicked_mesh.clicked_index].shader_type = 'f';
+
+                    //vertex normals equal to face normals
+                    int insert_start = 0;
+                    for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
+                    {
+                        insert_start+= meshes[i].F.cols()*3;
+                    }
+
+                    for(unsigned i=0; i < clicked_mesh.F.cols();i++)
+                    {
+                        for(unsigned j=0; j<3;j++)
+                        {
+                            mesh_V.block(3,insert_start,3,1) = clicked_mesh.F.block(3,i,3,1);
+                            insert_start++;
+                        }
+                    }
                     break;
                 }
                 case  GLFW_KEY_L:
                 {
                     clicked_mesh.shader_type = 'p';
                     meshes[clicked_mesh.clicked_index].shader_type = 'p';
+                    int insert_start = 0;
+                    for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
+                    {
+                        insert_start+= meshes[i].F.cols()*3;
+                    }
+
+                    //vertex normals equal to average normal of all faces
+                    for(unsigned i=0; i<clicked_mesh.F.cols();i++)
+                    {
+                        for(unsigned j=0; j<3;j++)
+                        {
+                            mesh_V.col(insert_start) << clicked_mesh.V.col((int)clicked_mesh.F.coeffRef(j,i));
+                            insert_start++;
+                        }
+                    }
                     break;
                 }
                 default:
@@ -1100,7 +1132,7 @@ int main(void)
                     glUniform1i(program.uniform("shaderMode"),2);
                     Vector3f ka_gl = meshes[i].ka/255;
                     glUniform3fv(program.uniform("ka"),1, ka_gl.data());
-                    glUniform1f(program.uniform("ks"), 0.0);
+                    glUniform1f(program.uniform("ks"), meshes[i].ks);
                     glUniform1f(program.uniform("phongExp"), meshes[i].phong_exp);
 
                     glEnableVertexAttribArray(1);

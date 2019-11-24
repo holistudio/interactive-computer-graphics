@@ -31,8 +31,8 @@ VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
-float near = -0.5;
-float far = -3;
+float near = -1;
+float far = -10;
 float l = -1.0;
 float r = 1.0;
 float t = 1.0;
@@ -979,7 +979,7 @@ int main(void)
     view_pos << 0, 0;
 
     light spotlight;
-    spotlight.position << 0, 1, -1.0;
+    spotlight.position << 0, 1, 1.0;
     spotlight.color << 1.0, 1.0, 1.0;
     spotlight.intensity << 1.0, 1.0, 1.0;
 
@@ -999,7 +999,7 @@ int main(void)
     //orthographic projection matrix
     M_orth << 2/(r-l), 0, 0, -(r+l)/(r-l),
     0, 2/(t-b), 0, -(t+b)/(t-b),
-    0, 0, 2/(near-far), -(near+far)/(near-far),
+    0, 0, 2/(far-near), -(near+far)/(far-near),
     0, 0, 0, 1;
 
     //perspective project matrix

@@ -278,8 +278,6 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
         mesh_structure.V.resize(6,num_vertices);
         mesh_structure.F.resize(6,num_faces);
 
-
-
         //load matrix V with vertices
         for (unsigned i=0;i<num_vertices;i++)
         {
@@ -314,7 +312,6 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
             {
                 mesh_structure.F.coeffRef(j+3,i) = face_normal.coeffRef(j);
             }
-
         }
         
         mesh_structure.bound_center << 0,0,0;
@@ -328,13 +325,6 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
                 mesh_structure.bound_center.coeffRef(j)+=mesh_structure.V.coeffRef(j,i);
             }
             
-            // for(unsigned j=0; j<maxDim.size(); j++)
-            // {
-            //     if(abs(mesh_structure.V.coeffRef(j,i))>maxDim.coeff(j))
-            //     {
-            //         maxDim.coeffRef(j)=abs(mesh_structure.V.coeffRef(j,i));
-            //     }
-            // }
             //for each face 
             for(unsigned j=0; j<mesh_structure.F.cols(); j++)
             {
@@ -704,22 +694,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     mesh_V.conservativeResize(NoChange, mesh_V.cols()+cube.F.cols()*3); 
                 }
 
-                //vertex normals equal to average normal of all faces
-                for(unsigned i=0; i<cube.F.cols();i++)
-                {
-                    for(unsigned j=0; j<3;j++)
-                    {
-                        mesh_V.col(insert_start) << cube.V.col((int)cube.F.coeffRef(j,i));
-                        insert_start++;
-                    }
-                }
-
-                //vertex normals equal to face normals
-                insert_start = 0;
+                
                 for(unsigned i=0; i < cube.F.cols();i++)
                 {
                     for(unsigned j=0; j<3;j++)
                     {
+                        mesh_V.col(insert_start) << cube.V.col((int)cube.F.coeffRef(j,i));
+                        //vertex normals equal to face normals
                         mesh_V.block(3,insert_start,3,1) = cube.F.block(3,i,3,1);
                         insert_start++;
                     }
@@ -750,6 +731,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     for(unsigned j=0; j<3;j++)
                     {
                         mesh_V.col(insert_start) << cube.V.col((int)cube.F.coeffRef(j,i));
+                        //vertex normals equal to face normals
+                        mesh_V.block(3,insert_start,3,1) = cube.F.block(3,i,3,1);
                         insert_start++;
                     }
                 }
@@ -820,6 +803,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                             insert_start++;
                         }
                     }
+
+                    mesh_VBO.update(mesh_V);
                     break;
                 }
                 case  GLFW_KEY_L:
@@ -841,6 +826,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                             insert_start++;
                         }
                     }
+
+                    mesh_VBO.update(mesh_V);
                     break;
                 }
                 default:
@@ -1143,8 +1130,6 @@ int main(void)
                     glUniform1i(program.uniform("shaderMode"),1);
                     Vector3f ka_gl = meshes[i].ka/255;
                     glUniform3fv(program.uniform("ka"),1, ka_gl.data());
-                    glUniform1f(program.uniform("ks"), 1.0);
-                    glUniform1f(program.uniform("phongExp"), 2);
 
                     glEnableVertexAttribArray(1);
                     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)12);

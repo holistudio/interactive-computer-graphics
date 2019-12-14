@@ -1,81 +1,42 @@
-# Drawing Triangles with OpenGL
+# Rendering Meshes with OpenGL
 
-Using C++ and OpenGL, this program allows for a user to draw triangles, transform, and animate them. The user can also control the view's zoom and x-y position.
-
-Full demo on [Vimeo](https://vimeo.com/368192125)
-
-## Task 1.1 Triangle Soup Editor
-
-<div>
-<img src="img/task1-1_0.png" width="200"> <img src="img/task1-1_1.png" width="200"> <img src="img/task1-1_2.png" width="200"></div>
-
-After pressing the 'i' key, first two mouse clicks draws a line strip for the edges of the triangle. Third mouse click creates a red triangle.
-
-<img src="img/task1-1_3.png" width="609">
-
-The steps can be repeated to draw multiple triangles.
-
-After pressing the 'o' key, triangles can be selected, with white border indicating they are selected. While the mouse left button is still pressed, the selected triangles can be moved
-
-<div>
-<img src="img/task1-1_4.png" width="400"> <img src="img/task1-1_5.png" width="400"></div>
-
-(note that this is accomplished in lines 468-482 of main.cpp. However those lines are commented out because subsequent tasks require that releasing the mouse button does not un-select the triangle. )
+Using C++ and OpenGL, this program allows for a user to insert and modify meshes in orthographic and perspective view.
 
 
-## Task 1.2 Rotate/Scale triangles
+## Task 1.1 Scene Editor
 
-Selected triangles can then be rotated ('h'/'j' keys 10deg CW/CCW) and scaled ('k'/'l' keys +/-25%).
+Pressing 1, 2, 3 keys adds loaded meshes to the origin, scaled to a unit cube
 
-<div>
-<img src="img/task1-2_r0.png" width="400"> <img src="img/task1-2_r1.png" width="400"></div>
+<img src="img/task1_1_0.png" width="400">
 
-Rotation
+<img src="img/task1_1_1.png" width="400">
 
-<div>
-<img src="img/task1-2_s0.png" width="400"> <img src="img/task1-2_s1.png" width="400"></div>
+## Task 1.2 Object Control / Render Style
 
-Scale
+Clicking on an object turns it blue. While the mouse button is clicked/pressed, the mesh will translate with the mouse. The following keys can be pressed to modify:
 
-## Task 1.3 Color vertices
+ - '.' / '/' keys **scales** the mesh
+ - ';' / ''/'' keys **rotates** the mesh
+ - 'delete' / 'backspace' keys delete the mesh
+ - 'j' 'k' 'l' keys  switch the render style from wireframe, flat, and phong shading styles respectively
 
-After pressing the 'c' key, vertices of each triangle can be colored individually. When the mouse is clicked, the closest vertex to the mouse cursor changes to the color blue.
+<img src="img/task1_1_2.png" width="400">
 
-<div>
-<img src="img/task1-3_0.png" width="400"> <img src="img/task1-3_1.png" width="400"></div>
+<img src="img/task1_1_3.png" width="400">
 
-Pressing the numbers 1-9 on the keyboard then changes that vertex to various colors.
+<img src="img/task1_2_0.png" width="400">
 
-<img src="img/task1-3_2.png" width="600">
+## Task 1.3 Camera Control
 
-Colors are automatically interpolated between vertices by OpenGL.
+'o' / 'p' keys switch between orthographic and perspective
+'a' / 'd' moves the camera on the x-axis directions
+'q' / 'z' moves the camera on the y-axis directions
+'w' / 's' moves the camera on the z-axis directions
 
-## Task 1.4 View control
+Gaze always points towards the origin.
 
-At any time during the program, 'w' 'a' 's' 'd' keys can shift the view **camera's position**, while '+'/'-' keys zoom in and out of the scene. This is done via shader uniform variables, rather than direct manipulation of vertices coordinates of objects in the scene.
-
-<div>
-<img src="img/task1-4_0a.png" width="150"> <img src="img/task1-4_1w.png" width="150"> <img src="img/task1-4_2d.png" width="150"> <img src="img/task1-4_3s.png" width="150"> </div>
-
-Keys 'a' 'w' 'd' 's' pressed in that order.
-
-<div>
-<img src="img/task1-4_4plus.png" width="400"> <img src="img/task1-4_5minus.png" width="400"></div>
-
-Zooming in and out with '+' and '-' keys
-
-(**Note:** By '+' key, I really mean the '=' key, where '+' is shown above. Pressing SHIFT and '=' key to zoom in is not necessary. But hey, Adobe Illustrator follows a similar convention.)
-
-## Task 1.5
-
-After the user presses the 'm' key, they can draw triangles for an animation. Subsequent keyframes are made by pressing the '.' key. While they are free to rotate, translate, and color triangle vertices, after the first keyframe they cannot add any more triangles to the scene. When they are finished with the entire animation sequence, users can press the '/' key to see an animation loop interpolating between keyframes, with each keyframe one second apart.
-
-<img src="img/task1-5.gif" width="600">
-
-The animation is stopped when the user presses any key after the animation plays.
+<img src="img/task1_3_0.png" width="400"></div>
 
 # References
 
-As always, *Fundamentals of Computer Graphics* by Marschner and Shirley was an invaluable resource. Chapter 2.7 and Chapter 17 were frequently referenced.
-
-Additional help on Eigen Matrix manipulation came from this posting: https://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c (thank the gods for StackOverFlow).
+As always, *Fundamentals of Computer Graphics* by Marschner and Shirley was an invaluable resource.

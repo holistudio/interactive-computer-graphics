@@ -22,8 +22,6 @@ using namespace std;
 #include <cmath>
 #include <fstream>
 #include <limits>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 // VertexBufferObject wrapper
 VertexBufferObject line_VBO;
@@ -651,7 +649,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
     }
     else
     {
-        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
         {
             clicked_mesh.clicked = false;
             clicked_mesh.clicked_index = 0;
@@ -1031,8 +1028,6 @@ int main(void)
     //             0, 0, (abs(near)+abs(far))/(abs(near)-abs(far)), 2*abs(far)*abs(near)/(abs(near)-abs(far)),
     //             0, 0, -1, 0;
 
-    glm::mat4 perspective_projection = glm::perspective(glm::radians(-45.0f), (float)width / (float)height, abs(near), abs(far));
- 
     M_proj = M_orth;
     //camera view matrix
     M_cam = camera_matrix();

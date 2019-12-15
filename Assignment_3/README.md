@@ -16,7 +16,7 @@ Pressing 1, 2, 3 keys adds loaded meshes to the origin, scaled to a unit cube
 Clicking on an object turns it blue. While the mouse button is clicked/pressed, the mesh will translate with the mouse. The following keys can be pressed to modify:
 
  - '.' / '/' keys **scales** the mesh
- - ';' / ''/'' keys **rotates** the mesh
+ - ';' / ' ' ' keys **rotates** the mesh
  - 'delete' / 'backspace' keys delete the mesh
  - 'j' 'k' 'l' keys  switch the render style from wireframe, flat, and phong shading styles respectively
 

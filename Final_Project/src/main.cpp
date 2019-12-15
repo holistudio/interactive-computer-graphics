@@ -756,6 +756,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case  GLFW_KEY_W:
                 eye_pos = eye_pos - 0.1*Vector3f::UnitZ();
                 M_cam = camera_matrix();
+                break;
             case  GLFW_KEY_S:
                 eye_pos = eye_pos + 0.1*Vector3f::UnitZ();
                 M_cam = camera_matrix();

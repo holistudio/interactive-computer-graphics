@@ -1055,8 +1055,6 @@ int main(void)
     //camera view matrix
     M_cam = camera_matrix();
 
-    
-
     // Vector4f test(1.,1.,0.,1.0);
     // cout << M_cam * test << endl;
     // cout << "---" << endl;
@@ -1069,6 +1067,7 @@ int main(void)
     // persp_test = persp_test / persp_test.coeff(3);
     // cout << persp_test << endl;
 
+    // Initialize simpler program for drawing axes
     Program axes_program;
     const GLchar* ax_vertex_shader =
             "#version 330 core\n"
@@ -1179,10 +1178,13 @@ int main(void)
     // Update viewport
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     
+    // Enable depth tests
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+
     // Clear the framebuffer
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
@@ -1203,13 +1205,6 @@ int main(void)
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
         glDrawArrays(GL_LINES,0,line_V.cols());
-
-        // for(unsigned i = 0; i<line_V.cols()/2; i++)
-        // {
-        //     glUniform3fv(program.uniform("kd"),1, line_V.block(3,i*2,3,1).data());
-        //     glDrawArrays(GL_LINES,i*2,2);
-        // }
-        // axes_program.free();
 
         // Bind program
         program.bind();
@@ -1233,8 +1228,6 @@ int main(void)
         glUniform3fv(program.uniform("Ia"),1,ambient_intensity.data());
 
         glUniform1i(program.uniform("shaderMode"),0);
-
-        
 
         if(mesh_V.cols()>1)
         {

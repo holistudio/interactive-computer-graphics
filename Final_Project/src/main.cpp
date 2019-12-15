@@ -49,7 +49,7 @@ Matrix4f M_normal;
 Vector3f eye_pos(0,0,1.5);
 
 // Contains the vertex positions of the lines and triangles
-MatrixXf line_V(5,1);
+MatrixXf line_V(6,1);
 MatrixXf tri_V(5,1);
 MatrixXf mesh_V(6,1);
 
@@ -992,7 +992,14 @@ int main(void)
 
     // Initialize the VBOs
     line_VBO.init();
-    line_V.resize(5,1);
+    line_V.resize(6,6);
+    line_V.col(0) << -100,0.,0.,1.,0.,0.;
+    line_V.col(1) << 100,0.,0.,1.,0.,0.;
+    line_V.col(2) << 0.,-100,0.,0.,0.,1.;
+    line_V.col(3) << 0.,100,0.,0.,0.,1.;
+    line_V.col(4) << 0,0.,-100.,0.,1.,0.;
+    line_V.col(5) << 0,0.,100.,0.,1.,0.;
+
     line_VBO.update(line_V);
 
     tri_VBO.init();
@@ -1050,17 +1057,41 @@ int main(void)
 
     
 
-    Vector4f test(1.,1.,0.,1.0);
-    cout << M_cam * test << endl;
-    cout << "---" << endl;
-    cout << M_orth * M_cam * test << endl;
-    cout << "---" << endl;
-    cout << M_vp * M_orth * M_cam * test << endl;
-    cout << "---" << endl;
+    // Vector4f test(1.,1.,0.,1.0);
+    // cout << M_cam * test << endl;
+    // cout << "---" << endl;
+    // cout << M_orth * M_cam * test << endl;
+    // cout << "---" << endl;
+    // cout << M_vp * M_orth * M_cam * test << endl;
+    // cout << "---" << endl;
     
     // Vector4f persp_test =   M_orth * P * M_cam * test;
     // persp_test = persp_test / persp_test.coeff(3);
     // cout << persp_test << endl;
+
+    Program axes_program;
+    const GLchar* ax_vertex_shader =
+            "#version 330 core\n"
+                    "layout(location=0) in vec3 position;"
+                    "layout(location=1) in vec3 inColor;"
+                    "uniform mat4 viewportMatrix;"
+                    "uniform mat4 projMatrix;"
+                    "uniform mat4 camMatrix;"
+                    "out vec3 vertexColor;"
+                    "void main()"
+                    "{"
+                    "    vertexColor = inColor;"
+                    "    vec4 pos = camMatrix * vec4(position, 1.0);"
+                    "    gl_Position = viewportMatrix * projMatrix * pos;"
+                    "}";
+    const GLchar* ax_fragment_shader =
+            "#version 330 core\n"
+                    "in vec3 vertexColor;"
+                    "out vec4 fragmentColor;"
+                    "void main()"
+                    "{"
+                    "    fragmentColor = vec4(vertexColor, 1.0);"
+                    "}";
 
     // Initialize the OpenGL Program
     Program program;
@@ -1130,6 +1161,8 @@ int main(void)
                     "    }"
                     "}";
 
+    axes_program.init(ax_vertex_shader,ax_fragment_shader,"fragmentColor");
+    axes_program.bind();
     // Compile the two shaders and upload the binary to the GPU
     program.init(vertex_shader,fragment_shader,"fragmentColor");
     program.bind();
@@ -1148,11 +1181,35 @@ int main(void)
     
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-
+    // Clear the framebuffer
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window))
     {
+        //glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        axes_program.bind();
         VAO.bind();
+
+        glUniformMatrix4fv(axes_program.uniform("viewportMatrix"),1, GL_FALSE, M_vp.data());
+        glUniformMatrix4fv(axes_program.uniform("camMatrix"),1, GL_FALSE, M_cam.data());
+        glUniformMatrix4fv(axes_program.uniform("projMatrix"),1, GL_FALSE, M_proj.data());
+
+        line_VBO.bind();
+
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
+        glDrawArrays(GL_LINES,0,line_V.cols());
+
+        // for(unsigned i = 0; i<line_V.cols()/2; i++)
+        // {
+        //     glUniform3fv(program.uniform("kd"),1, line_V.block(3,i*2,3,1).data());
+        //     glDrawArrays(GL_LINES,i*2,2);
+        // }
+        // axes_program.free();
 
         // Bind program
         program.bind();
@@ -1177,11 +1234,7 @@ int main(void)
 
         glUniform1i(program.uniform("shaderMode"),0);
 
-        // Clear the framebuffer
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-        //glClear(GL_COLOR_BUFFER_BIT);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
 
         if(mesh_V.cols()>1)
         {
@@ -1241,7 +1294,7 @@ int main(void)
                     //draw triangles
                     if(meshes[i].shader_type == 'w')
                     {
-                        glDrawArrays(GL_LINE_LOOP,j*3,3);
+                        glDrawArrays(GL_LINE_LOOP, j*3, 3);
                     }
                     else
                     {
@@ -1263,19 +1316,6 @@ int main(void)
             }
   
         }
-            
-
-        //if triangle is selected
-        if(mode == 'm')
-        {
-            
-        }
-        
-        //if a triangle is being inserted
-        if(mode == 'i')
-        {
-
-        }
 
 
         // Swap front and back buffers
@@ -1287,6 +1327,7 @@ int main(void)
 
     // Deallocate opengl memory
     program.free();
+    axes_program.free();
     line_VBO.free();
     tri_VBO.free();
     mesh_VBO.free();

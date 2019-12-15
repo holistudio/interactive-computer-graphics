@@ -1158,14 +1158,6 @@ GL/glext.h
 GL/glu.h
 -
 
-/Users/daniellu/Documents/Daniel/Grad School/NYU/PhD/Classes/Fall 2019/Interactive Computer Graphics/Assignments/interactive-computer-graphics/Final_Project/src/Helpers.cpp
-Helpers.h
-/Users/daniellu/Documents/Daniel/Grad School/NYU/PhD/Classes/Fall 2019/Interactive Computer Graphics/Assignments/interactive-computer-graphics/Final_Project/src/Helpers.h
-iostream
--
-fstream
--
-
 /Users/daniellu/Documents/Daniel/Grad School/NYU/PhD/Classes/Fall 2019/Interactive Computer Graphics/Assignments/interactive-computer-graphics/Final_Project/src/Helpers.h
 string
 -

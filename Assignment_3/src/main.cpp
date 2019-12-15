@@ -19,6 +19,7 @@ using namespace Eigen;
 using namespace std;
 #include <chrono>
 #include <iostream>
+#include <algorithm> 
 #include <cmath>
 #include <fstream>
 #include <limits>
@@ -376,11 +377,20 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-
-    M_vp << width/2, 0, 0, (width - 1)/2,
-    0, height/2, 0, (height-1)/2,
+    float f_width, f_height;
+    f_width = float(width);
+    f_height = float(height);
+    float aspect_x = fmin(f_height/f_width,1.);
+    float aspect_y = fmin(f_width/f_height,1.);
+    M_vp << aspect_x, 0, 0, 0,
+    0, aspect_y, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1;
+
+    // M_vp << width/2, 0, 0, (width - 1)/2,
+    // 0, height/2, 0, (height-1)/2,
+    // 0, 0, 1, 0,
+    // 0, 0, 0, 1;
 
     // M_vp << 2/width, 0, 0, 1,
     // 0, 2/height, 0, 1,
@@ -951,6 +961,10 @@ int main(void)
     int width, height;
     glfwGetWindowSize(window, &width, &height);
 
+    float f_width, f_height;
+    f_width = float(width);
+    f_height = float(height);
+
     #ifndef __APPLE__
       glewExperimental = true;
       GLenum err = glewInit();
@@ -1006,8 +1020,10 @@ int main(void)
 
     // M_vp = M_vp.inverse().eval();
 
-    M_vp << 2/width, 0, 0, 1,
-    0, 2/height, 0, 1,
+    float aspect_x = fmin(f_height/f_width,1.);
+    float aspect_y = fmin(f_width/f_height,1.);
+    M_vp << aspect_x, 0, 0, 0,
+    0, aspect_y, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1;
 
@@ -1034,11 +1050,14 @@ int main(void)
 
     
 
-    // Vector4f test(1.0,1.0,-1.5,1.0);
-    // cout << M_cam * test << endl;
-    // cout << "---" << endl;
-    // cout << M_orth * M_cam * test << endl;
-    // cout << "---" << endl;
+    Vector4f test(1.,1.,0.,1.0);
+    cout << M_cam * test << endl;
+    cout << "---" << endl;
+    cout << M_orth * M_cam * test << endl;
+    cout << "---" << endl;
+    cout << M_vp * M_orth * M_cam * test << endl;
+    cout << "---" << endl;
+    
     // Vector4f persp_test =   M_orth * P * M_cam * test;
     // persp_test = persp_test / persp_test.coeff(3);
     // cout << persp_test << endl;
@@ -1071,7 +1090,7 @@ int main(void)
                     "       lightDir = normalize(lightPos.xyz - pos.xyz);"
                     "       halfVec = normalize(v + lightDir);"
                     "    }"
-                    "    gl_Position = projMatrix * pos;"
+                    "    gl_Position = viewportMatrix * projMatrix * pos;"
                     "}";
     const GLchar* fragment_shader =
             "#version 330 core\n"

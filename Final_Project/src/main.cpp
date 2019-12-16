@@ -76,6 +76,13 @@ class light
         Vector3f intensity;
 };
 
+// Human Pose Parameters
+// Vector of pose coordinates for each animation frame
+vector<MatrixXf> poses;
+
+MatrixXf pose_V(6,2);
+// MatrixXf pose_V(3,1);
+VertexBufferObject pose_VBO;
 
 // Container for tracking the triangle vertex positions and colors at each key frame of an animation
 Eigen::MatrixXf anim_tri_V(5,1);
@@ -270,15 +277,12 @@ vector<string> comma_sep_string(string line)
     return substrings;
 }
 
-vector<MatrixXf> load_pose(string csv_filepath)
+void load_pose(string csv_filepath)
 {
-    vector<MatrixXf> poses;
-
     string line;
     vector<string> substrings;
     ifstream in(csv_filepath);
-    // int pose = 0;
-    
+
     if(in.is_open())
     {
         while(getline(in,line))
@@ -296,18 +300,10 @@ vector<MatrixXf> load_pose(string csv_filepath)
                 j=j+2;
                 i++;
             }
-            
-            // vertices.col(i) << stof(substrings[0]), stof(substrings[1]), stof(substrings[2]);
-            // cout<< vertices.col(0) << endl;
             poses.push_back(vertices);
-            // pose++;
         }
         in.close();
     }
-    cout << poses[0] << endl;
-    cout << "===" << endl;
-    cout << poses[64] << endl;
-    return poses;
 }
 
 tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
@@ -801,6 +797,24 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case GLFW_KEY_C:
             {
                 load_pose("../data/vertices.csv");
+                // self.I   = np.array([0,1,2,0,6,7, 0,13,13,17,18,13,25,26])
+                // self.J   = np.array([1,2,3,6,7,8,13,15,17,18,19,25,26,27])
+                vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
+                vector<int> point_j{1,2,3,6,7,8,13,15,17,18,19,25,26,27};
+                
+                for(unsigned i=0; i<point_i.size(); i++)
+                {
+                    //i=2
+                    if(i>0)
+                    {
+                        pose_V.conservativeResize(6,pose_V.cols()+2); //6cols
+                    }
+                    pose_V.col(i*2) << poses[0].coeffRef(0,point_i[i]), poses[0].coeffRef(1,point_i[i]), poses[0].coeffRef(2,point_i[i]), 1, 1, 1; //4
+                    pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1; //5
+                    // i++;
+                }
+                cout << pose_V << endl;
+                pose_VBO.update(pose_V);
                 break; 
             }
             case GLFW_KEY_1:
@@ -1091,6 +1105,9 @@ int main(void)
     mesh_V.resize(6,1);
     mesh_VBO.update(mesh_V);
 
+    pose_VBO.init();
+    pose_V.resize(6,2);
+    pose_VBO.update(pose_V);
     // Initialize view scale and position
     view_scale << 1, 0, 0, 1;
     view_pos << 0, 0;
@@ -1174,78 +1191,78 @@ int main(void)
                     "}";
 
     // Initialize the OpenGL Program
-    Program program;
-    const GLchar* vertex_shader =
-            "#version 330 core\n"
-                    "layout(location=0) in vec3 position;"
-                    "layout(location=1) in vec3 inNormal;"
-                    "out vec4 normal;"
-                    "out vec3 halfVec;"
-                    "out vec3 lightDir;"
-                    "uniform mat4 viewportMatrix;"
-                    "uniform mat4 projMatrix;"
-                    "uniform mat4 camMatrix;"
-                    "uniform mat4 modelMatrix;"
-                    "uniform mat4 normalMatrix;"
-                    "uniform int shaderMode;"
-                    "uniform mat2 scale;"
-                    "uniform vec2 translation;"
-                    "uniform vec3 lightPosition;"
-                    "void main()"
-                    "{"
-                    "    vec4 pos = camMatrix * modelMatrix * vec4(position, 1.0);"
-                    "    if(shaderMode != 0){"
-                    "       vec4 lightPos = camMatrix * vec4(lightPosition, 1.0);"
-                    "       normal = normalMatrix * vec4(inNormal, 0.0);"
-                    "       vec3 v = normalize(-pos.xyz);"
-                    "       lightDir = normalize(lightPos.xyz - pos.xyz);"
-                    "       halfVec = normalize(v + lightDir);"
-                    "    }"
-                    "    gl_Position = viewportMatrix * projMatrix * pos;"
-                    "}";
-    const GLchar* fragment_shader =
-            "#version 330 core\n"
-                    "in vec4 normal;"
-                    "in vec3 halfVec;"
-                    "in vec3 lightDir;"
-                    "uniform vec3 lightIntensity;"
-                    "uniform int shaderMode;"
-                    "uniform vec3 Ia;"
-                    "uniform vec3 ka;"
-                    "uniform vec3 kd;"
-                    "uniform float ks;"
-                    "uniform float phongExp;"
-                    "out vec4 fragmentColor;"
-                    "void main()"
-                    "{"
-                    "    if (shaderMode == 0) {"
-                    "       fragmentColor = vec4(kd, 1.0);"
-                    "    }"
-                    "    else {"
-                    "       if(shaderMode == 1){"
-                    "       vec3 n = normalize(normal.xyz);"
-                    "       vec3 l = normalize(lightDir);"
-                    "       float diffuse =  max(0.0, dot(n,l));"
-                    "       vec3 intensity = ka * Ia + kd * lightIntensity * (diffuse);"
-                    "       fragmentColor = vec4(intensity, 1.0);"
-                    "       }"
-                    "       else{"
-                    "       vec3 n = normalize(normal.xyz);"
-                    "       vec3 h = normalize(halfVec);"
-                    "       vec3 l = normalize(lightDir);"
-                    "       float diffuse =  max(0.0, dot(n,l));"
-                    "       float specular = ks * pow(max(0.0,dot(n,h)),phongExp);"
-                    "       vec3 intensity = ka * Ia + kd * lightIntensity * (diffuse + specular);"
-                    "       fragmentColor = vec4(intensity, 1.0);"
-                    "       }"
-                    "    }"
-                    "}";
+    // Program program;
+    // const GLchar* vertex_shader =
+    //         "#version 330 core\n"
+    //                 "layout(location=0) in vec3 position;"
+    //                 "layout(location=1) in vec3 inNormal;"
+    //                 "out vec4 normal;"
+    //                 "out vec3 halfVec;"
+    //                 "out vec3 lightDir;"
+    //                 "uniform mat4 viewportMatrix;"
+    //                 "uniform mat4 projMatrix;"
+    //                 "uniform mat4 camMatrix;"
+    //                 "uniform mat4 modelMatrix;"
+    //                 "uniform mat4 normalMatrix;"
+    //                 "uniform int shaderMode;"
+    //                 "uniform mat2 scale;"
+    //                 "uniform vec2 translation;"
+    //                 "uniform vec3 lightPosition;"
+    //                 "void main()"
+    //                 "{"
+    //                 "    vec4 pos = camMatrix * modelMatrix * vec4(position, 1.0);"
+    //                 "    if(shaderMode != 0){"
+    //                 "       vec4 lightPos = camMatrix * vec4(lightPosition, 1.0);"
+    //                 "       normal = normalMatrix * vec4(inNormal, 0.0);"
+    //                 "       vec3 v = normalize(-pos.xyz);"
+    //                 "       lightDir = normalize(lightPos.xyz - pos.xyz);"
+    //                 "       halfVec = normalize(v + lightDir);"
+    //                 "    }"
+    //                 "    gl_Position = viewportMatrix * projMatrix * pos;"
+    //                 "}";
+    // const GLchar* fragment_shader =
+    //         "#version 330 core\n"
+    //                 "in vec4 normal;"
+    //                 "in vec3 halfVec;"
+    //                 "in vec3 lightDir;"
+    //                 "uniform vec3 lightIntensity;"
+    //                 "uniform int shaderMode;"
+    //                 "uniform vec3 Ia;"
+    //                 "uniform vec3 ka;"
+    //                 "uniform vec3 kd;"
+    //                 "uniform float ks;"
+    //                 "uniform float phongExp;"
+    //                 "out vec4 fragmentColor;"
+    //                 "void main()"
+    //                 "{"
+    //                 "    if (shaderMode == 0) {"
+    //                 "       fragmentColor = vec4(kd, 1.0);"
+    //                 "    }"
+    //                 "    else {"
+    //                 "       if(shaderMode == 1){"
+    //                 "       vec3 n = normalize(normal.xyz);"
+    //                 "       vec3 l = normalize(lightDir);"
+    //                 "       float diffuse =  max(0.0, dot(n,l));"
+    //                 "       vec3 intensity = ka * Ia + kd * lightIntensity * (diffuse);"
+    //                 "       fragmentColor = vec4(intensity, 1.0);"
+    //                 "       }"
+    //                 "       else{"
+    //                 "       vec3 n = normalize(normal.xyz);"
+    //                 "       vec3 h = normalize(halfVec);"
+    //                 "       vec3 l = normalize(lightDir);"
+    //                 "       float diffuse =  max(0.0, dot(n,l));"
+    //                 "       float specular = ks * pow(max(0.0,dot(n,h)),phongExp);"
+    //                 "       vec3 intensity = ka * Ia + kd * lightIntensity * (diffuse + specular);"
+    //                 "       fragmentColor = vec4(intensity, 1.0);"
+    //                 "       }"
+    //                 "    }"
+    //                 "}";
 
     axes_program.init(ax_vertex_shader,ax_fragment_shader,"fragmentColor");
     axes_program.bind();
     // Compile the two shaders and upload the binary to the GPU
-    program.init(vertex_shader,fragment_shader,"fragmentColor");
-    program.bind();
+    // program.init(vertex_shader,fragment_shader,"fragmentColor");
+    // program.bind();
 
     // Register the keyboard callback
     glfwSetKeyCallback(window, key_callback);
@@ -1287,108 +1304,10 @@ int main(void)
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
         glDrawArrays(GL_LINES,0,line_V.cols());
 
-        // Bind program
-        program.bind();
-
-        // Set the uniform view matrix and translation vectors
-        glUniformMatrix2fv(program.uniform("scale"),1, GL_FALSE, view_scale.data());
-        glUniform2fv(program.uniform("translation"),1, view_pos.data());
-
-        //uniforms for transformation matrices
-        glUniformMatrix4fv(program.uniform("viewportMatrix"),1, GL_FALSE, M_vp.data());
-        glUniformMatrix4fv(program.uniform("camMatrix"),1, GL_FALSE, M_cam.data());
-
-        glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_proj.data());
-        //glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, &perspective_projection[0][0]);
-        
-        
-        //light uniforms
-        glUniform3fv(program.uniform("lightPosition"),1, spotlight.position.data());
-        glUniform3fv(program.uniform("lightIntensity"),1, spotlight.intensity.data());
-        Vector3f ambient_intensity(1.0,1.0,1.0);
-        glUniform3fv(program.uniform("Ia"),1,ambient_intensity.data());
-
-        glUniform1i(program.uniform("shaderMode"),0);
-
-        if(mesh_V.cols()>1)
+        if(pose_V.cols()>1)
         {
-            mesh_VBO.bind();
-            //for each mesh
-            long start = 0;
-                
-            for(unsigned i = 0; i<meshes.size(); i++)
-            {
-                M_comb = M_cam * meshes[i].M_model;
-                M_normal = M_comb.inverse().transpose();
-
-                glUniformMatrix4fv(program.uniform("modelMatrix"),1, GL_FALSE, meshes[i].M_model.data());
-                glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
-
-                //draw mesh elements
-                Vector3f color_gl = meshes[i].diff_color/255;
-                if(clicked_mesh.clicked && clicked_mesh.clicked_index == i)
-                {
-                    glUniform3fv(program.uniform("kd"),1, Vector3f(0,0,1).data());
-                }
-                else
-                {
-                    glUniform3fv(program.uniform("kd"),1, color_gl.data());
-                }
-                
-                glEnableVertexAttribArray(0);
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start));
-
-                if(meshes[i].shader_type == 'p')
-                {
-                    glUniform1i(program.uniform("shaderMode"),2);
-                    Vector3f ka_gl = meshes[i].ka/255;
-                    glUniform3fv(program.uniform("ka"),1, ka_gl.data());
-                    glUniform1f(program.uniform("ks"), meshes[i].ks);
-                    glUniform1f(program.uniform("phongExp"), meshes[i].phong_exp);
-
-                    glEnableVertexAttribArray(1);
-                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start+12));
-                }
-                else if( meshes[i].shader_type == 'f')
-                {
-                    glUniform1i(program.uniform("shaderMode"),1);
-                    Vector3f ka_gl = meshes[i].ka/255;
-                    glUniform3fv(program.uniform("ka"),1, ka_gl.data());
-
-                    glEnableVertexAttribArray(1);
-                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start+12));
-                }
-                else if (meshes[i].shader_type == 'w')
-                {
-                    glUniform1i(program.uniform("shaderMode"),0);
-                }
-
-                for(unsigned j=0; j<meshes[i].F.cols(); j++)
-                {
-                    //draw triangles
-                    if(meshes[i].shader_type == 'w')
-                    {
-                        glDrawArrays(GL_LINE_LOOP, j*3, 3);
-                    }
-                    else
-                    {
-                        glDrawArrays(GL_TRIANGLES, j*3, 3);
-
-                    }
-                    
-                }
-                if(meshes[i].shader_type == 'f')
-                {
-                    glUniform3fv(program.uniform("kd"),1, Vector3f(1,1,1).data());
-                    glUniform1i(program.uniform("shaderMode"),0);
-                    for(unsigned j=0; j<meshes[i].F.cols(); j++)
-                    {
-                        glDrawArrays(GL_LINE_LOOP,j*3,3);
-                    }
-                }
-                start+= meshes[i].F.cols()*3;
-            }
-  
+            pose_VBO.bind();
+            glDrawArrays(GL_LINES,0,pose_V.cols());
         }
 
 
@@ -1400,7 +1319,7 @@ int main(void)
     }
 
     // Deallocate opengl memory
-    program.free();
+    // program.free();
     axes_program.free();
     line_VBO.free();
     tri_VBO.free();

@@ -277,7 +277,7 @@ vector<string> comma_sep_string(string line)
     return substrings;
 }
 
-void load_pose(string csv_filepath, float scale)
+void load_pose(string csv_filepath, Vector3f position, float scale)
 {
     cout << scale << endl;
     string line;
@@ -297,7 +297,7 @@ void load_pose(string csv_filepath, float scale)
                 {
                     vertices.conservativeResize(3,vertices.cols()+1);
                 }
-                vertices.col(i) << stof(substrings[j])*scale, stof(substrings[j+2])*scale, stof(substrings[j+1])*-scale;
+                vertices.col(i) << stof(substrings[j])*scale+position.coeff(0), stof(substrings[j+2])*scale+position.coeff(1), stof(substrings[j+1])*-scale+position.coeff(2);
                 
                 j=j+2;
                 i++;
@@ -798,7 +798,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case GLFW_KEY_C:
             {
-                load_pose("../data/vertices.csv",0.00123);
+                load_pose("../data/vertices.csv",Vector3f(0,.917,0),0.00123);
                 vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
                 vector<int> point_j{1,2,3,6,7,8,13,15,17,18,19,25,26,27};
                 

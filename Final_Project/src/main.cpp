@@ -31,12 +31,12 @@ VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
-float near = -1;
-float far = -10;
-float l = -1.0;
-float r = 1.0;
-float t = 1.0;
-float b = -1.0;
+float near = 20;
+float far = -20;
+float l = -3.0;
+float r = 3.0;
+float t = 3.0;
+float b = -3.0;
 Matrix4f M_vp;
 
 Matrix4f M_orth;
@@ -47,7 +47,7 @@ Matrix4f M_cam;
 Matrix4f M_comb;
 Matrix4f M_normal;
 
-Vector3f eye_pos(0,0,1.5);
+Vector3f eye_pos(0,0,3);
 
 // Contains the vertex positions of the lines and triangles
 MatrixXf line_V(6,1);

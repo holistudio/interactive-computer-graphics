@@ -297,7 +297,7 @@ void load_pose(string csv_filepath, float scale)
                 {
                     vertices.conservativeResize(3,vertices.cols()+1);
                 }
-                vertices.col(i) << stof(substrings[j])*scale, stof(substrings[j+1])*scale, stof(substrings[j+2])*scale;
+                vertices.col(i) << stof(substrings[j])*scale, stof(substrings[j+2])*scale, stof(substrings[j+1])*-scale;
                 
                 j=j+2;
                 i++;
@@ -799,21 +799,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case GLFW_KEY_C:
             {
                 load_pose("../data/vertices.csv",0.00123);
-                // self.I   = np.array([0,1,2,0,6,7, 0,13,13,17,18,13,25,26])
-                // self.J   = np.array([1,2,3,6,7,8,13,15,17,18,19,25,26,27])
                 vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
                 vector<int> point_j{1,2,3,6,7,8,13,15,17,18,19,25,26,27};
                 
                 for(unsigned i=0; i<point_i.size(); i++)
                 {
-                    //i=2
                     if(i>0)
                     {
-                        pose_V.conservativeResize(6,pose_V.cols()+2); //6cols
+                        pose_V.conservativeResize(6,pose_V.cols()+2);
                     }
-                    pose_V.col(i*2) << poses[0].coeffRef(0,point_i[i]), poses[0].coeffRef(1,point_i[i]), poses[0].coeffRef(2,point_i[i]), 1, 1, 1; //4
-                    pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1; //5
-                    // i++;
+                    pose_V.col(i*2) << poses[0].coeffRef(0,point_i[i]), poses[0].coeffRef(1,point_i[i]), poses[0].coeffRef(2,point_i[i]), 1, 1, 1; 
+                    pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1;
                 }
                 cout << pose_V << endl;
                 pose_VBO.update(pose_V);

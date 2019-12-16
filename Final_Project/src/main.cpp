@@ -277,8 +277,9 @@ vector<string> comma_sep_string(string line)
     return substrings;
 }
 
-void load_pose(string csv_filepath)
+void load_pose(string csv_filepath, float scale)
 {
+    cout << scale << endl;
     string line;
     vector<string> substrings;
     ifstream in(csv_filepath);
@@ -296,7 +297,8 @@ void load_pose(string csv_filepath)
                 {
                     vertices.conservativeResize(3,vertices.cols()+1);
                 }
-                vertices.col(i) << stof(substrings[j]), stof(substrings[j+1]), stof(substrings[j+2]);
+                vertices.col(i) << stof(substrings[j])*scale, stof(substrings[j+1])*scale, stof(substrings[j+2])*scale;
+                
                 j=j+2;
                 i++;
             }
@@ -796,7 +798,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case GLFW_KEY_C:
             {
-                load_pose("../data/vertices.csv");
+                load_pose("../data/vertices.csv",0.00123);
                 // self.I   = np.array([0,1,2,0,6,7, 0,13,13,17,18,13,25,26])
                 // self.J   = np.array([1,2,3,6,7,8,13,15,17,18,19,25,26,27])
                 vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
@@ -1307,6 +1309,10 @@ int main(void)
         if(pose_V.cols()>1)
         {
             pose_VBO.bind();
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
             glDrawArrays(GL_LINES,0,pose_V.cols());
         }
 

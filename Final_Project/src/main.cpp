@@ -22,6 +22,7 @@ using namespace std;
 #include <algorithm> 
 #include <cmath>
 #include <fstream>
+#include <string>
 #include <limits>
 
 // VertexBufferObject wrapper
@@ -233,6 +234,80 @@ vector<string> space_sep_string(string line)
         
     }
     return substrings;
+}
+vector<string> comma_sep_string(string line)
+{
+    //separates string into a vector of substring as space dividers
+    vector<int> split_index;
+    vector<string> substrings;
+    for (unsigned i=0;i<line.size();i++)
+    {
+        if(line[i]==',')
+        {
+            split_index.push_back(i);
+        }
+    }
+
+    int split_start = 0;
+    int substr_len;
+    for (unsigned i=0;i<split_index.size()+1;i++)
+    {
+        if(i<split_index.size())
+        {
+            substr_len= split_index[i] - split_start;
+        }
+        else
+        {
+            substr_len= line.size() - split_start;
+        }
+        substrings.push_back(line.substr(split_start,substr_len));
+        if(i<split_index.size())
+        {
+            split_start = split_index[i]+1;
+        }
+        
+    }
+    return substrings;
+}
+
+vector<MatrixXf> load_pose(string csv_filepath)
+{
+    vector<MatrixXf> poses;
+
+    string line;
+    vector<string> substrings;
+    ifstream in(csv_filepath);
+    // int pose = 0;
+    
+    if(in.is_open())
+    {
+        while(getline(in,line))
+        {
+            MatrixXf vertices(3,1);
+            unsigned i = 0;
+            substrings = comma_sep_string(line);
+            for (unsigned j=0;j<substrings.size();j++)
+            {
+                if(j>0)
+                {
+                    vertices.conservativeResize(3,vertices.cols()+1);
+                }
+                vertices.col(i) << stof(substrings[j]), stof(substrings[j+1]), stof(substrings[j+2]);
+                j=j+2;
+                i++;
+            }
+            
+            // vertices.col(i) << stof(substrings[0]), stof(substrings[1]), stof(substrings[2]);
+            // cout<< vertices.col(0) << endl;
+            poses.push_back(vertices);
+            // pose++;
+        }
+        in.close();
+    }
+    cout << poses[0] << endl;
+    cout << "===" << endl;
+    cout << poses[64] << endl;
+    return poses;
 }
 
 tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
@@ -721,6 +796,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case GLFW_KEY_O:
             {
                 M_proj= M_orth;
+                break; 
+            }
+            case GLFW_KEY_C:
+            {
+                load_pose("../data/vertices.csv");
                 break; 
             }
             case GLFW_KEY_1:

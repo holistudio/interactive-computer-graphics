@@ -698,10 +698,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                         cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
                     
                         //update mesh_V
-                        if(j==0)
-                        {
-                            mesh_V_update(cube);
-                        }
+                        mesh_V_update(cube);
                         meshes.push_back(cube);
                     }
                 }
@@ -709,7 +706,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 cout << "All " << poses.size() << " keyframe poses loaded" << endl;
                 // cout << mesh_V.cols() <<endl;
                 //update VBO
-                mesh_VBO.update(mesh_V);
+                mesh_VBO.update(mesh_V.block(0,0,6,504));
                 break;
             }
             // case  GLFW_KEY_SLASH:
@@ -1076,7 +1073,7 @@ int main(void)
                 glEnableVertexAttribArray(1);
                 glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
 
-                glDrawArrays(GL_TRIANGLES, 0, mesh_V.cols());
+                glDrawArrays(GL_TRIANGLES, 0, 504);
                 // start+= meshes[i].F.cols()*3;
             // }
   

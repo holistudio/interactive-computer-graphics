@@ -279,7 +279,6 @@ vector<string> comma_sep_string(string line)
 
 void load_pose(string csv_filepath, Vector3f position, float scale)
 {
-    cout << scale << endl;
     string line;
     vector<string> substrings;
     ifstream in(csv_filepath);
@@ -384,7 +383,7 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
     //if the first line says 'OFF' continue
     if(string(str).compare("OFF")==0)
     {  
-        std::cout << "Valid OFF File" << std::endl;
+        // std::cout << "Valid OFF File" << std::endl;
         while (summary_line_read == false && in.getline(str,255)) 
         {
             if(str[0]!='#')
@@ -868,16 +867,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             {                
                 vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
                 vector<int> point_j{1,2,3,6,7,8,13,15,17,18,19,25,26,27};
-                for(unsigned i=0; i<point_i.size(); i++)
+                for(unsigned j=0; j<poses.size(); j++)
                 {
-                    tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1);
-                    point arm1 = point(poses[0].coeffRef(0,point_i[i]),poses[0].coeffRef(1,point_i[i]),poses[0].coeffRef(2,point_i[i]));
-                    point arm2 = point(poses[0].coeffRef(0,point_j[i]),poses[0].coeffRef(1,point_j[i]),poses[0].coeffRef(2,point_j[i]));
-                    cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
-                    meshes.push_back(cube);
-                    mesh_V_update(cube);
+                    for(unsigned i=0; i<point_i.size(); i++)
+                    {
+                        tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1);
+                        point arm1 = point(poses[j].coeffRef(0,point_i[i]),poses[j].coeffRef(1,point_i[i]),poses[j].coeffRef(2,point_i[i]));
+                        point arm2 = point(poses[j].coeffRef(0,point_j[i]),poses[j].coeffRef(1,point_j[i]),poses[j].coeffRef(2,point_j[i]));
+                        cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
+                        meshes.push_back(cube);
+                    }
                 }
                 
+                cout << "All " << poses.size() << " keyframe poses loaded" << endl;
+                //update mesh_V with initial pose
+                // mesh_V_update(cube);
                 //update VBO
                 mesh_VBO.update(mesh_V);
                 break;
@@ -1471,6 +1475,36 @@ int main(void)
             }
   
         }
+
+        // if(mode == 'p')
+        // {
+        //     // track time elapsed since animation start
+        //     auto t_now = std::chrono::high_resolution_clock::now();
+        //     float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
+
+        //     if(time > 0)
+        //     {
+        //         // find indices in the animation matrix, anim_tri_V
+        //         // corresponding to the 2 keyframes of the animation at current time
+        //         int k_0 = floor(time / time_step)*num_anim_V;
+        //         int k_1 = ceil(time / time_step)*num_anim_V;
+
+        //         // if it's not the end of the animation
+        //         if(ceil(time/time_step)<num_keyframes)
+        //         {
+        //             // interpolate between triangle positions and colors at the 2 key frames
+        //             for(unsigned i=0; i<tri_V.cols(); i++)
+        //             {
+        //                 tri_V.col(i) = anim_tri_V.col(k_0+i)+(anim_tri_V.col(k_1+i)-anim_tri_V.col(k_0+i))*(time-floor(time / time_step));
+        //             }
+        //             tri_VBO.update(tri_V);
+        //         }
+        //         else
+        //         {
+        //             t_start = t_now;
+        //         }
+        //     }
+        // }
         // Swap front and back buffers
         glfwSwapBuffers(window);
 

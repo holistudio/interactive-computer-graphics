@@ -60,7 +60,6 @@ MatrixXf mesh_V(6,1);
 // variables for tracking which mode the drawing application is in
 char mode = ' ';
 
-
 //Light Class
 class light
 {
@@ -75,10 +74,10 @@ class light
 vector<MatrixXf> poses;
 
 // The following code is for rendering the lines of the pose skeleton
-// MatrixXf pose_V(6,2);
-// VertexBufferObject pose_VBO;
+MatrixXf pose_V(6,2);
+VertexBufferObject pose_VBO;
 
-//start and end point indices of Pose_3D keypoints for drawing pose skeleton
+//start and end point indices of Pose_3D/Human3.6M keypoints for drawing pose skeleton
 vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
 vector<int> point_j{1,2,3,6,7,8,13,15,17,18,19,25,26,27};
 
@@ -541,21 +540,29 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 M_proj= M_orth;
                 break; 
             }
-            case GLFW_KEY_1:
+            case GLFW_KEY_2:
             {
                 load_pose("../data/vertices.csv",Vector3f(0,.917,0),0.00123);
                 num_keyframes = poses.size();
                 
                 // The following code is for rendering the lines of the pose skeleton
-                // for(unsigned i=0; i<point_i.size(); i++)
-                // {
-                //     if(i>0)
-                //     {
-                //         pose_V.conservativeResize(6,pose_V.cols()+2);
-                //     }
-                //     pose_V.col(i*2) << poses[0].coeffRef(0,point_i[i]), poses[0].coeffRef(1,point_i[i]), poses[0].coeffRef(2,point_i[i]), 1, 1, 1; 
-                //     pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1;
-                // }
+                for(unsigned i=0; i<point_i.size(); i++)
+                {
+                    if(i>0)
+                    {
+                        pose_V.conservativeResize(6,pose_V.cols()+2);
+                    }
+                    pose_V.col(i*2) << poses[0].coeffRef(0,point_i[i]), poses[0].coeffRef(1,point_i[i]), poses[0].coeffRef(2,point_i[i]), 1, 1, 1; 
+                    pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1;
+                }
+                pose_VBO.update(pose_V);
+                break;
+            }
+            case GLFW_KEY_1:
+            {
+                load_pose("../data/vertices.csv",Vector3f(0,.917,0),0.00123);
+                num_keyframes = poses.size();
+                
                 cout << "Pose coordinates loaded" << endl;
 
                 //for each pose keyframe
@@ -720,10 +727,11 @@ int main(void)
     mesh_VBO.init();
     mesh_V.resize(6,1);
     mesh_VBO.update(mesh_V);
-
-    // pose_VBO.init();
-    // pose_V.resize(6,2);
-    // pose_VBO.update(pose_V);
+    
+    // The following code is for rendering the lines of the pose skeleton
+    pose_VBO.init();
+    pose_V.resize(6,2);
+    pose_VBO.update(pose_V);
 
     light spotlight;
     spotlight.position << 3, 6, 4.0;
@@ -874,15 +882,15 @@ int main(void)
         glDrawArrays(GL_LINES,0,line_V.cols());
 
         // The following code is for rendering the lines of the pose skeleton
-        // if(pose_V.cols()>1)
-        // {
-        //     pose_VBO.bind();
-        //     glEnableVertexAttribArray(0);
-        //     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
-        //     glEnableVertexAttribArray(1);
-        //     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
-        //     glDrawArrays(GL_LINES,0,pose_V.cols());
-        // }
+        if(pose_V.cols()>2)
+        {
+            pose_VBO.bind();
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
+            glDrawArrays(GL_LINES,0,pose_V.cols());
+        }
         // Bind program
         program.bind();
 
@@ -978,6 +986,8 @@ int main(void)
                         // keyframe pairs at time 
                         int k_0 = floor(time / time_step);
                         int k_1 = ceil(time / time_step);
+
+                        float t_0 = float(k_0) * time_step;
                          
                         //same body part mesh in two different keyframe poses
                         // tri_mesh part_0 = meshes[k_0*point_i.size()];
@@ -991,7 +1001,7 @@ int main(void)
                             v_0_col = mesh_V.col(k_0*504+j);
                             VectorXf v_1_col(6,1);
                             v_1_col = mesh_V.col(k_1*504+j);
-                            mesh_interp.col(j) << v_0_col + (time-floor(time / time_step)) * (v_1_col - v_0_col);
+                            mesh_interp.col(j) << v_0_col + ((time-t_0)/(time_step)) * (v_1_col - v_0_col)/(time_step);
                         }
                     }
                     mesh_VBO.update(mesh_interp);

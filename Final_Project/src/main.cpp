@@ -726,7 +726,7 @@ int main(void)
     // pose_VBO.update(pose_V);
 
     light spotlight;
-    spotlight.position << 0, 3, 3.0;
+    spotlight.position << 3, 6, 4.0;
     spotlight.color << 1.0, 1.0, 1.0;
     spotlight.intensity << 1.0, 1.0, 1.0;
 

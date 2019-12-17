@@ -31,12 +31,19 @@ VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
 // Viewing Transformation Matrices
-float near = 20;
-float far = -20;
-float l = -3.0;
-float r = 3.0;
-float t = 3.0;
-float b = -3.0;
+// float near = 20;
+// float far = -20;
+// float l = -3.0;
+// float r = 3.0;
+// float t = 3.0;
+// float b = -3.0;
+
+float near = -1;
+float far = -10;
+float l = -2.0;
+float r = 2.0;
+float t = 2.0;
+float b = -2.0;
 Matrix4f M_vp;
 
 Matrix4f M_orth;
@@ -878,8 +885,6 @@ int main(void)
 
     tri_mesh floor_mesh = load_mesh("../data/ground_plane.off",Vector3f(0,0,0),1.0);
     tri_V_update(floor_mesh);
-
-    cout<<tri_V<<endl;
     tri_VBO.update(tri_V);
 
     mesh_VBO.init();

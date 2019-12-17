@@ -30,16 +30,9 @@ VertexBufferObject line_VBO;
 VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
-// Viewing Volume
-// float near = 20;
-// float far = -20;
-// float l = -3.0;
-// float r = 3.0;
-// float t = 3.0;
-// float b = -3.0;
-
-float near = -1;
-float far = -10;
+// Viewing Volume (camera coordinates)
+float near = 1;
+float far = -20;
 float l = -2.0;
 float r = 2.0;
 float t = 2.0;

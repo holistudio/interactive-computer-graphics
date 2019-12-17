@@ -30,7 +30,7 @@ VertexBufferObject line_VBO;
 VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
 
-// Viewing Transformation Matrices
+// Viewing Volume
 // float near = 20;
 // float far = -20;
 // float l = -3.0;
@@ -44,6 +44,8 @@ float l = -2.0;
 float r = 2.0;
 float t = 2.0;
 float b = -2.0;
+
+// Viewing Transformation Matrices
 Matrix4f M_vp;
 
 Matrix4f M_orth;
@@ -54,20 +56,17 @@ Matrix4f M_cam;
 Matrix4f M_comb;
 Matrix4f M_normal;
 
+// Camera initial position
 Vector3f eye_pos(0,0,3);
 
-// Contains the vertex positions of the lines and triangles
+// Matrices contain the vertex positions of the lines and triangles
 MatrixXf line_V(6,1);
 MatrixXf tri_V(6,1);
 MatrixXf mesh_V(6,1);
 
 // variables for tracking which mode the drawing application is in
 char mode = ' ';
-bool animation_mode = false;
 
-//View control variables that link to shader uniforms
-Matrix2f view_scale;
-Vector2f view_pos;
 
 //Light Class
 class light
@@ -82,9 +81,9 @@ class light
 // Vector of pose coordinates for each animation frame
 vector<MatrixXf> poses;
 
-MatrixXf pose_V(6,2);
-// MatrixXf pose_V(3,1);
-VertexBufferObject pose_VBO;
+// The following code is for rendering the lines of the pose skeleton
+// MatrixXf pose_V(6,2);
+// VertexBufferObject pose_VBO;
 
 //start and end point indices of Pose_3D keypoints for drawing pose skeleton
 vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
@@ -106,11 +105,6 @@ class tri_mesh
         float ks;
         char shader_type;
         float phong_exp;
-        float bound_radius;
-        Vector3f bound_center;
-        Vector3f bound_center_clicked;
-        bool clicked = false; // tracks whether the mesh is selected
-        int clicked_index; //start index on meshes vector
 };
 
 //Store all mesh objects in vector, 'meshes'
@@ -123,27 +117,6 @@ float time_step = 1.0;
 chrono::time_point<chrono::high_resolution_clock> t_start;
 
 // Color, Point, and Triangle Classes for easier-to-read code
-class color
-{
-    public:
-
-        float r;
-        float g;
-        float b;
-        color()
-        {
-            r = 0.0; //values between 0 and 1 for convenient use with OpenGL shaders
-            g = 0.0;
-            b = 0.0;
-        }
-        color(float r1, float g1, float b1)
-        {
-            r = r1;
-            g = g1;
-            b = b1;
-        }
-
-};
 
 class point
 {
@@ -165,35 +138,7 @@ class point
         }
 };
 
-class triangle
-{
-    public:
-        vector<point> v; //vector of vertices
-        bool clicked = false; // tracks whether there is a triangle selected on the screen or not
-        int clicked_index; //start index on tri_V matrix
-};
-
-class ray
-{
-    public:
-        Vector3f e;
-        Vector3f d;
-};
-class sphere
-{
-    public:
-        Vector3f center;
-        double radius;
-};
-
-class hit_sphere
-{
-    public:
-        bool hit = false;
-        double t;
-        sphere hit_obj;
-};
-
+//Useful functions for splitting string based on space and comma delimiters
 vector<string> space_sep_string(string line)
 {
     //separates string into a vector of substring as space dividers
@@ -296,7 +241,7 @@ void load_pose(string csv_filepath, Vector3f position, float scale)
 
 Matrix4f cube_transform(point p1, point p2, float x_scale, float z_scale)
 {
-    //transform basic cube mesh to fit the bodypart between 2 points
+    //transform basic cube mesh to fit the body part between 2 points
     // https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
     Vector3f cube_vector(0,-1,0);
     Vector3f part_vector(p2.x-p1.x, p2.y-p1.y, p2.z-p1.z);
@@ -426,53 +371,6 @@ tri_mesh load_mesh(string off_filepath, Vector3f position, double scale)
             }
         }
         
-        mesh_structure.bound_center << 0,0,0;
-        
-
-        //iterate through matrix V
-        for(unsigned i=0; i<mesh_structure.V.cols(); i++)
-        {
-            for(unsigned j=0; j<3; j++)
-            {
-                mesh_structure.bound_center.coeffRef(j)+=mesh_structure.V.coeffRef(j,i);
-            }
-            
-            //for each face 
-            for(unsigned j=0; j<mesh_structure.F.cols(); j++)
-            {
-                //for each face vertex
-                for(unsigned k=0; k<3; k++)
-                {
-                    int face_vertex_index = int(mesh_structure.F.coeffRef(k,j));
-                    //if face vertex index == i
-                    if(face_vertex_index == i)
-                    {
-                        //add face normal to vertex normal
-                        mesh_structure.V.block(3,i,3,1) = mesh_structure.V.block(3,i,3,1) + mesh_structure.F.block(3,j,3,1);
-                    }
-
-                }
-            }
-            //normalize vertex (3,4,5);
-            Vector3f vertex_normal = mesh_structure.V.block(3,i,3,1);
-            vertex_normal = vertex_normal.normalized();
-            mesh_structure.V.block(3,i,3,1) << vertex_normal;
-        }
-
-        mesh_structure.bound_center = mesh_structure.bound_center / num_vertices;
-        mesh_structure.bound_radius = 0.0;
-
-        for(unsigned i=0; i<mesh_structure.V.cols(); i++)
-        {
-            Vector3f vertex = mesh_structure.V.block(0,i,3,1);
-            float cand_radius = (vertex - mesh_structure.bound_center).norm();
-            if(cand_radius > mesh_structure.bound_radius)
-            {
-                mesh_structure.bound_radius = cand_radius;
-            }
-        }
-        // cout << mesh_structure.bound_center << endl;
-        // cout << mesh_structure.bound_radius << endl;
         return mesh_structure;
     }
     else
@@ -505,53 +403,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // 0, 2/height, 0, 1,
     // 0, 0, 1, 0,
     // 0, 0, 0, 1;
-}
-
-
-hit_sphere ray_hit_sphere(ray r, double t_lower, sphere test_sphere)
-{
-    hit_sphere test;
-    const double sphere_radius = test_sphere.radius;
-    Vector3f sphere_center = test_sphere.center;
-
-    //Calculate discriminant
-    Vector3f e_c = r.e - sphere_center;
-    //quadratic equation
-    double a = r.d.dot(r.d);
-    double b = r.d.dot(e_c);
-    double c = e_c.dot(e_c) - sphere_radius * sphere_radius;
-
-    //discriminant
-    double discriminant = b*b - a*c;
-
-    if(discriminant>=0)
-    {
-        test.hit = true;
-        test.hit_obj = test_sphere;
-        //if discriminant is greater than or equal to 0
-        //Calculate sphere intersection parameter, test.t
-        if(discriminant ==0)
-        {
-            test.t = -b/a;
-        }
-        else
-        {
-            test.t = (-b - sqrt(discriminant)) / a;
-            if(test.t < 0)
-            {
-                test.t = (-b + sqrt(discriminant)) / a;
-            }
-            else
-            {
-                double t2 = (-b + sqrt(discriminant)) / a;
-                if (t2>0 && t2<test.t)
-                {
-                    test.t = t2;
-                }
-            }
-        }
-    }
-    return test;
 }
 
 Matrix4f camera_matrix()
@@ -690,16 +541,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 0, abs(near)*2/(t-b), (t+b)/(t-b), 0,
                 0, 0, (abs(near)+abs(far))/(abs(near)-abs(far)), 2*abs(far)*abs(near)/(abs(near)-abs(far)),
                 0, 0, -1, 0;
-
-                // M_proj << 2*near/(r-l), 0, (l+r)/(l-r), 0,
-                // 0, near*2/(t-b), (b+t)/(b-t), 0,
-                // 0, 0, (near+far)/(near-far), 2*far*near/(near-far),
-                // 0, 0, 1, 0;
-
-                // cout<< M_proj <<endl;
-
-                // M_proj = M_orth * P ;
-                // cout<< M_proj <<endl;
                 break; 
             }
             case GLFW_KEY_O:
@@ -712,15 +553,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 load_pose("../data/vertices.csv",Vector3f(0,.917,0),0.00123);
                 num_keyframes = poses.size();
                 
-                for(unsigned i=0; i<point_i.size(); i++)
-                {
-                    if(i>0)
-                    {
-                        pose_V.conservativeResize(6,pose_V.cols()+2);
-                    }
-                    pose_V.col(i*2) << poses[0].coeffRef(0,point_i[i]), poses[0].coeffRef(1,point_i[i]), poses[0].coeffRef(2,point_i[i]), 1, 1, 1; 
-                    pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1;
-                }
+                // The following code is for rendering the lines of the pose skeleton
+                // for(unsigned i=0; i<point_i.size(); i++)
+                // {
+                //     if(i>0)
+                //     {
+                //         pose_V.conservativeResize(6,pose_V.cols()+2);
+                //     }
+                //     pose_V.col(i*2) << poses[0].coeffRef(0,point_i[i]), poses[0].coeffRef(1,point_i[i]), poses[0].coeffRef(2,point_i[i]), 1, 1, 1; 
+                //     pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1;
+                // }
                 cout << "Pose coordinates loaded" << endl;
 
                 //for each pose keyframe
@@ -856,7 +698,7 @@ int main(void)
     printf("OpenGL version recieved: %d.%d.%d\n", major, minor, rev);
     printf("Supported OpenGL is %s\n", (const char*)glGetString(GL_VERSION));
     printf("Supported GLSL is %s\n", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
-
+    cout << "====================" << endl;
     // Initialize the VAO
     VertexArrayObject VAO;
     VAO.init();
@@ -886,12 +728,9 @@ int main(void)
     mesh_V.resize(6,1);
     mesh_VBO.update(mesh_V);
 
-    pose_VBO.init();
-    pose_V.resize(6,2);
-    pose_VBO.update(pose_V);
-    // Initialize view scale and position
-    view_scale << 1, 0, 0, 1;
-    view_pos << 0, 0;
+    // pose_VBO.init();
+    // pose_V.resize(6,2);
+    // pose_VBO.update(pose_V);
 
     light spotlight;
     spotlight.position << 0, 3, 3.0;
@@ -899,13 +738,6 @@ int main(void)
     spotlight.intensity << 1.0, 1.0, 1.0;
 
     //viewport transformation matrix
-    // M_vp << width/2, 0, 0, (width-1)/2,
-    // 0, height/2, 0, (height-1)/2,
-    // 0, 0, 1, 0,
-    // 0, 0, 0, 1;
-
-    // M_vp = M_vp.inverse().eval();
-
     float aspect_x = fmin(f_height/f_width,1.);
     float aspect_y = fmin(f_width/f_height,1.);
     M_vp << aspect_x, 0, 0, 0,
@@ -918,17 +750,6 @@ int main(void)
     0, 2/(t-b), 0, -(t+b)/(t-b),
     0, 0, 2/(far-near), -(near+far)/(far-near),
     0, 0, 0, 1;
-
-    //perspective project matrix
-    // P << near, 0, 0, 0,
-    // 0, near, 0, 0,
-    // 0, 0, near+far, -far*near,
-    // 0, 0, 1, 0;
-
-    // P << 2*abs(near)/(r-l), 0, (r+l)/(r-l), 0,
-    //             0, abs(near)*2/(t-b), (t+b)/(t-b), 0,
-    //             0, 0, (abs(near)+abs(far))/(abs(near)-abs(far)), 2*abs(far)*abs(near)/(abs(near)-abs(far)),
-    //             0, 0, -1, 0;
 
     M_proj = M_orth;
     //camera view matrix
@@ -984,8 +805,6 @@ int main(void)
                     "uniform mat4 projMatrix;"
                     "uniform mat4 camMatrix;"
                     "uniform mat4 normalMatrix;"
-                    "uniform mat2 scale;"
-                    "uniform vec2 translation;"
                     "uniform vec3 lightPosition;"
                     "void main()"
                     "{"
@@ -1061,6 +880,7 @@ int main(void)
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
         glDrawArrays(GL_LINES,0,line_V.cols());
 
+        // The following code is for rendering the lines of the pose skeleton
         // if(pose_V.cols()>1)
         // {
         //     pose_VBO.bind();
@@ -1072,10 +892,6 @@ int main(void)
         // }
         // Bind program
         program.bind();
-
-        // Set the uniform view matrix and translation vectors
-        glUniformMatrix2fv(program.uniform("scale"),1, GL_FALSE, view_scale.data());
-        glUniform2fv(program.uniform("translation"),1, view_pos.data());
 
         //uniforms for transformation matrices
         glUniformMatrix4fv(program.uniform("viewportMatrix"),1, GL_FALSE, M_vp.data());

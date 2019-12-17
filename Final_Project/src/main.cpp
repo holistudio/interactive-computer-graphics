@@ -844,7 +844,7 @@ int main(void)
     view_pos << 0, 0;
 
     light spotlight;
-    spotlight.position << 0, 1, 1.0;
+    spotlight.position << 0, 3, 3.0;
     spotlight.color << 1.0, 1.0, 1.0;
     spotlight.intensity << 1.0, 1.0, 1.0;
 

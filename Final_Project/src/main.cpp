@@ -108,9 +108,6 @@ class tri_mesh
 
 //Store all mesh objects in vector, 'meshes'
 vector<tri_mesh> meshes;
-
-// Number of body parts sets the "stride" across 'meshes' for animation
-int num_anim_V=0;
 // Number of animation keyframes
 int num_keyframes = 0;
 // Time step between animation key frames
@@ -616,10 +613,20 @@ void mesh_V_update(tri_mesh new_mesh)
         //for each of mesh face's vertex
         for(unsigned j=0; j<3;j++)
         {
+            //transform vertex based on model Matrix
+            Vector4f vertex_trans;
+            Vector4f normal_trans;
+            vertex_trans << new_mesh.V.col((int)new_mesh.F.coeffRef(j,i)).head<3>(),1;
+            normal_trans << new_mesh.F.block(3,i,3,1), 1;
+
+            vertex_trans = new_mesh.M_model * vertex_trans;
+            normal_trans = new_mesh.M_model * normal_trans;
+
             //insert mesh vertex and vertex normals into the mesh_V matrix
-            mesh_V.col(insert_start) << new_mesh.V.col((int)new_mesh.F.coeffRef(j,i));
+            mesh_V.col(insert_start) << vertex_trans.head<3>(), 1, 1, 1;
+            
             //vertex normals equal to face normals
-            mesh_V.block(3,insert_start,3,1) = new_mesh.F.block(3,i,3,1);
+            mesh_V.block(3,insert_start,3,1) = normal_trans.head<3>();
             insert_start++;
         }
     }
@@ -658,6 +665,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case GLFW_KEY_C:
             {
                 load_pose("../data/vertices.csv",Vector3f(0,.917,0),0.00123);
+                num_keyframes = poses.size();
                 
                 for(unsigned i=0; i<point_i.size(); i++)
                 {
@@ -700,26 +708,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 mesh_VBO.update(mesh_V);
                 break;
             }
-            case GLFW_KEY_2:
-            {
-                tri_mesh cube2 = load_mesh("../data/bumpy_cube.off",Vector3f(0,0,0),0.11343);
-                meshes.push_back(cube2);
-                mesh_V_update(cube2);
-                cout << meshes.size() << endl;
-                //update VBO
-                mesh_VBO.update(mesh_V);
-                break;
-            } 
-            case GLFW_KEY_3:
-            {
-                tri_mesh bunny = load_mesh("../data/bunny.off",Vector3f(0.120779,-0.405439,-0.0351582),5*0.86);
-                meshes.push_back(bunny);
-                mesh_V_update(bunny);
-                
-                //update VBO
-                mesh_VBO.update(mesh_V);
-                break;
-            }
+            // case  GLFW_KEY_SLASH:
+            // {
+            //     cout << "*** Animation Now Playing! ***" << endl;
+            //     // Store the current time for tracking animation time
+            //     t_start = std::chrono::high_resolution_clock::now();
+
+            //     // change application mode
+            //     mode = 'p';
+            //     break;
+            // }
             case  GLFW_KEY_W:
                 eye_pos = eye_pos - 0.1*Vector3f::UnitZ();
                 M_cam = camera_matrix();
@@ -935,7 +933,6 @@ int main(void)
                     "uniform mat4 viewportMatrix;"
                     "uniform mat4 projMatrix;"
                     "uniform mat4 camMatrix;"
-                    "uniform mat4 modelMatrix;"
                     "uniform mat4 normalMatrix;"
                     "uniform int shaderMode;"
                     "uniform mat2 scale;"
@@ -943,7 +940,7 @@ int main(void)
                     "uniform vec3 lightPosition;"
                     "void main()"
                     "{"
-                    "    vec4 pos = camMatrix * modelMatrix * vec4(position, 1.0);"
+                    "    vec4 pos = camMatrix * vec4(position, 1.0);"
                     "    if(shaderMode != 0){"
                     "       vec4 lightPos = camMatrix * vec4(lightPosition, 1.0);"
                     "       normal = normalMatrix * vec4(inNormal, 0.0);"
@@ -1057,7 +1054,6 @@ int main(void)
         glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, M_proj.data());
         //glUniformMatrix4fv(program.uniform("projMatrix"),1, GL_FALSE, &perspective_projection[0][0]);
         
-        
         //light uniforms
         glUniform3fv(program.uniform("lightPosition"),1, spotlight.position.data());
         glUniform3fv(program.uniform("lightIntensity"),1, spotlight.intensity.data());
@@ -1066,18 +1062,20 @@ int main(void)
 
         glUniform1i(program.uniform("shaderMode"),0);
 
+
+
         if(mesh_V.cols()>1)
         {
             mesh_VBO.bind();
             //for each mesh
             long start = 0;
                 
-            for(unsigned i = 0; i<14; i++)
+            for(unsigned i = 0; i<point_i.size(); i++)
             {
-                M_comb = M_cam * meshes[i].M_model;
+                
+                M_comb = M_cam;
                 M_normal = M_comb.inverse().transpose();
-
-                glUniformMatrix4fv(program.uniform("modelMatrix"),1, GL_FALSE, meshes[i].M_model.data());
+                
                 glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
 
                 //draw mesh elements
@@ -1149,20 +1147,41 @@ int main(void)
 
         //     if(time > 0)
         //     {
-        //         // find indices in the animation matrix, anim_tri_V
-        //         // corresponding to the 2 keyframes of the animation at current time
-        //         int k_0 = floor(time / time_step)*num_anim_V;
-        //         int k_1 = ceil(time / time_step)*num_anim_V;
-
+        //         //for each frame
         //         // if it's not the end of the animation
         //         if(ceil(time/time_step)<num_keyframes)
         //         {
-        //             // interpolate between triangle positions and colors at the 2 key frames
-        //             for(unsigned i=0; i<tri_V.cols(); i++)
+        //             int ins = 0;
+        //             //for each body part
+        //             for (unsigned i = 0; i<point_i.size(); i++)
         //             {
-        //                 tri_V.col(i) = anim_tri_V.col(k_0+i)+(anim_tri_V.col(k_1+i)-anim_tri_V.col(k_0+i))*(time-floor(time / time_step));
+        //                 // keyframe pairs at time 
+        //                 int k_0 = floor(time / time_step);
+        //                 int k_1 = ceil(time / time_step);
+
+        //                 //same body part mesh in two different keyframe poses
+        //                 tri_mesh part_0 = meshes[k_0*point_i.size()];
+        //                 tri_mesh part_1 = meshes[k_1*point_i.size()];
+
+        //                 //interpolate between vertices of body part in the two different keyframe poses
+                        
+        //                 for(unsigned j=0; j < part_0.F.cols();j++)
+        //                 {
+        //                     //for each of mesh face's vertex
+        //                     for(unsigned k=0; k<3;k++)
+        //                     {
+        //                         //interpolate between two key frames update relevant column in mesh_V
+        //                         VectorXf part_0_col(6,1);
+        //                         part_0_col = part_0.V.col((int)part_0.F.coeffRef(k,j));
+        //                         VectorXf part_1_col(6,1);
+        //                         part_1_col = part_1.V.col((int)part_0.F.coeffRef(k,j));
+        //                         mesh_V.col(ins) << part_0_col + (time-floor(time / time_step)) * (part_1_col - part_0_col);
+                                
+        //                         ins++;
+        //                     }
+        //                 }
         //             }
-        //             tri_VBO.update(tri_V);
+        //             mesh_VBO.update(mesh_V);
         //         }
         //         else
         //         {

@@ -25,7 +25,7 @@ using namespace std;
 #include <string>
 #include <limits>
 
-// VertexBufferObject wrapper
+// VertexBufferObject wrappers
 VertexBufferObject line_VBO;
 VertexBufferObject tri_VBO;
 VertexBufferObject mesh_VBO;
@@ -58,11 +58,6 @@ MatrixXf mesh_V(6,1);
 char mode = ' ';
 bool animation_mode = false;
 
-// variables for tracking mouse states
-Vector3f start_click;
-int click_count = 0;
-bool mouse_move = false;
-
 //View control variables that link to shader uniforms
 Matrix2f view_scale;
 Vector2f view_pos;
@@ -84,9 +79,37 @@ MatrixXf pose_V(6,2);
 // MatrixXf pose_V(3,1);
 VertexBufferObject pose_VBO;
 
-// Container for tracking the triangle vertex positions and colors at each key frame of an animation
-Eigen::MatrixXf anim_tri_V(5,1);
-// Number of triangle vertices throughout the animation
+//start and end point indices of Pose_3D keypoints for drawing pose skeleton
+vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
+vector<int> point_j{1,2,3,6,7,8,13,15,17,18,19,25,26,27};
+
+class tri_mesh
+{
+    //basic triangular mesh
+    public:
+        //V is a matrix (dimension 6 x #V where #V is the number of vertices)
+        // contains the positions and normals of the vertices of the mesh 
+        MatrixXf V;
+        //F is an matrix (dimension 6 x #F where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
+        MatrixXf F;
+        Matrix4f M_model;
+        Matrix4f M_model_clicked;
+        Vector3f diff_color;
+        Vector3f ka;
+        float ks;
+        char shader_type;
+        float phong_exp;
+        float bound_radius;
+        Vector3f bound_center;
+        Vector3f bound_center_clicked;
+        bool clicked = false; // tracks whether the mesh is selected
+        int clicked_index; //start index on meshes vector
+};
+
+//Store all mesh objects in vector, 'meshes'
+vector<tri_mesh> meshes;
+
+// Number of body parts sets the "stride" across 'meshes' for animation
 int num_anim_V=0;
 // Number of animation keyframes
 int num_keyframes = 0;
@@ -146,36 +169,6 @@ class triangle
         int clicked_index; //start index on tri_V matrix
 };
 
-struct Vertex 
-{
-  Vector3f position;
-  Vector3f normal;
-  Vector3f color;
-};
-
-class tri_mesh
-{
-    //basic triangular mesh
-    public:
-        //V is a matrix (dimension 6 x #V where #V is the number of vertices)
-        // contains the positions and normals of the vertices of the mesh 
-        MatrixXf V;
-        //F is an matrix (dimension 6 x #F where #F is the number of faces) which contains the descriptions of the triangles in the mesh. 
-        MatrixXf F;
-        Matrix4f M_model;
-        Matrix4f M_model_clicked;
-        Vector3f diff_color;
-        Vector3f ka;
-        float ks;
-        char shader_type;
-        float phong_exp;
-        float bound_radius;
-        Vector3f bound_center;
-        Vector3f bound_center_clicked;
-        bool clicked = false; // tracks whether the mesh is selected
-        int clicked_index; //start index on meshes vector
-};
-
 class ray
 {
     public:
@@ -196,17 +189,6 @@ class hit_sphere
         double t;
         sphere hit_obj;
 };
-
-// global variable for storing the clicked triangle's properties
-tri_mesh clicked_mesh;
-
-// global variable for storing the clicked vertex's index position in tri_V
-int v_clicked = 0;
-
-// vector of colors for shading vertices in Task 1.3
-vector<color> colors;
-
-vector<tri_mesh> meshes;
 
 vector<string> space_sep_string(string line)
 {
@@ -244,7 +226,7 @@ vector<string> space_sep_string(string line)
 }
 vector<string> comma_sep_string(string line)
 {
-    //separates string into a vector of substring as space dividers
+    //separates string into a vector of substring as delimited by commas
     vector<int> split_index;
     vector<string> substrings;
     for (unsigned i=0;i<line.size();i++)
@@ -279,6 +261,7 @@ vector<string> comma_sep_string(string line)
 
 void load_pose(string csv_filepath, Vector3f position, float scale)
 {
+    //load pose given a csv file of keypoints
     string line;
     vector<string> substrings;
     ifstream in(csv_filepath);
@@ -309,6 +292,7 @@ void load_pose(string csv_filepath, Vector3f position, float scale)
 
 Matrix4f cube_transform(point p1, point p2, float x_scale, float z_scale)
 {
+    //transform basic cube mesh to fit the bodypart between 2 points
     // https://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
     Vector3f cube_vector(0,-1,0);
     Vector3f part_vector(p2.x-p1.x, p2.y-p1.y, p2.z-p1.z);
@@ -519,44 +503,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // 0, 0, 0, 1;
 }
 
-point screen_to_world(GLFWwindow* window)
-{
-    // Given the mouse's screen coordinates
-    // the corresponding point in world coordinates is returned
-    // accounting for screen size and view controls
-
-    // Get the position of the mouse in the window
-    double xpos, ypos;
-    glfwGetCursorPos(window, &xpos, &ypos);
-    //printf("===\n%f, %f\n---\n", xpos, ypos);
-
-    // Get the size of the window
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-
-    // Convert screen position to canonical
-    double xworld = ((xpos/double(width))*2)-1;
-    double yworld = (((height-1-ypos)/double(height))*2)-1; 
-    double zworld = 0;
-    //printf("%f, %f\n---\n", xworld, yworld);
-
-    // adjust position accounting for view controls
-    // Matrix2f inv_scale;
-    // inv_scale << 1/view_scale.coeff(0,0),0,0,1/view_scale.coeff(1,1);
-    
-    Vector4f adj_pos;
-    adj_pos << float(xworld), float(yworld), 0, 1;
-    // adj_pos = inv_scale * adj_pos - view_pos;
-    Matrix4f inv_proj = M_proj.inverse().eval();
-    Matrix4f inv_cam = M_cam.inverse().eval();
-    adj_pos = inv_cam * inv_proj * adj_pos;
-    //printf("%f, %f\n===\n", adj_pos.coeff(0), adj_pos.coeff(1),adj_pos.coeff(2));
-
-    xworld = adj_pos.coeff(0);
-    yworld = adj_pos.coeff(1);
-    zworld = adj_pos.coeff(2);
-    return point(xworld, yworld, zworld);
-}
 
 hit_sphere ray_hit_sphere(ray r, double t_lower, sphere test_sphere)
 {
@@ -604,49 +550,6 @@ hit_sphere ray_hit_sphere(ray r, double t_lower, sphere test_sphere)
     return test;
 }
 
-void transform_triangle(GLFWwindow* window, tri_mesh sel_triangle, Matrix2f transform)
-{
-    // Given a triangle and a transformation matrix,
-    // compute transformed coordinates of its vertices
-
-    vector<Vector2f> new_vertices;
-
-    //find barycentric center, referencing the current rendered positions of the triangles
-    Vector2f v1 = Vector2f(tri_V.col(sel_triangle.clicked_index).coeff(0),tri_V.col(sel_triangle.clicked_index).coeff(1));
-    Vector2f v2 = Vector2f(tri_V.col(sel_triangle.clicked_index+1).coeff(0),tri_V.col(sel_triangle.clicked_index+1).coeff(1));
-    Vector2f v3 = Vector2f(tri_V.col(sel_triangle.clicked_index+2).coeff(0),tri_V.col(sel_triangle.clicked_index+2).coeff(1));
-    Vector2f bary_center = (v1 + v2 + v3)/3;
-
-    // subtract the coordinates of the centre from each vertex
-    v1 = v1 - bary_center;
-    v2 = v2 - bary_center;
-    v3 = v3 - bary_center;
-
-    // Then multiply each new vertex by the rotation matrix
-    v1 = transform * v1;
-    v2 = transform * v2;
-    v3 = transform * v3;
-
-    // add back the centre coordinates to each rotated vertex
-    v1 = v1 + bary_center;
-    v2 = v2 + bary_center;
-    v3 = v3 + bary_center;
-    new_vertices.push_back(v1);
-    new_vertices.push_back(v2);
-    new_vertices.push_back(v3);
-
-    // update matrices and VBOs
-    // line vertices and VBO are also updated
-    // given the transformed triangle is selected with a white border
-
-    tri_VBO.update(tri_V);
-    line_VBO.update(line_V);
-
-    // update starting position of the triangle to where the current mouse cursor is
-    point world_click = screen_to_world(window);
-    start_click << world_click.x, world_click.y, world_click.z;
-}
-
 Matrix4f camera_matrix()
 {
     Vector3f gaze=(Vector3f(0,0,0) - eye_pos);
@@ -684,107 +587,10 @@ void removeColumn(MatrixXf& matrix, unsigned int colToRemove)
     matrix.conservativeResize(numRows,numCols);
 }
 
-void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
-{
-    // Get mouse cursor position
-    point world_click = screen_to_world(window);
-
-    if(clicked_mesh.clicked)
-    {
-        //set current mouse position to vector mouse_pos
-        Vector3f mouse_pos;
-        mouse_pos << world_click.x, world_click.y, world_click.z;
-
-        //calculated difference btw start_click and mouse_pos
-        Vector3f tr = mouse_pos - start_click;
-
-        Matrix4f translation;
-        translation << 0, 0, 0, tr.coeff(0),
-        0, 0, 0, tr.coeff(1),
-        0, 0, 0, tr.coeff(2),
-        0, 0, 0, 0;
-
-        // int insert_start = 0;
-        // for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
-        // {
-        //     insert_start+= meshes[i].F.cols()*3;
-        // }
-        
-        //translate all vertices of the clicked mesh
-
-        clicked_mesh.M_model = clicked_mesh.M_model_clicked + translation;
-        clicked_mesh.bound_center = clicked_mesh.bound_center_clicked + tr;
-        //cout << clicked_mesh.M_model << endl;
-        meshes[clicked_mesh.clicked_index] = clicked_mesh;
-
-        // meshes[clicked_mesh.clicked_index].bound_center
-
-    }
-    
-}
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
-    // Get mouse cursor position
-    point world_click = screen_to_world(window);
-
-    // When left mouse button is pressed
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-    {
-        ray click_ray;
-        click_ray.e << world_click.x,world_click.y,world_click.z;
-        click_ray.d << 0,0,-1;
-
-        Vector4f d_hom;
-        d_hom << click_ray.d, 0;
-        Matrix4f inv_proj = M_proj.inverse().eval();
-        Matrix4f inv_cam = M_cam.inverse().eval();
-        d_hom = inv_cam * inv_proj * d_hom;
-        click_ray.d << (d_hom.head(3)).normalized();
-        //cout<< click_ray.d <<endl;
-
-        float min_dist = numeric_limits<float>::infinity(); 
-        for(unsigned i=0; i<meshes.size(); i++)
-        {
-            sphere test_sphere;
-            test_sphere.center = meshes[i].bound_center;
-            test_sphere.radius = meshes[i].bound_radius;
-            hit_sphere check = ray_hit_sphere(click_ray,0,test_sphere);
-            if(check.hit)
-            {
-                if(check.t < min_dist)
-                {
-                    min_dist = check.t;
-                    clicked_mesh = meshes[i];
-                    clicked_mesh.clicked_index = i;
-                    clicked_mesh.clicked = true;
-                    cout<< i <<endl;
-                }
-                start_click << world_click.x, world_click.y, world_click.z;
-                
-            }
-        }
-        if(min_dist == numeric_limits<float>::infinity())
-        {
-            clicked_mesh.clicked_index = 0;
-            clicked_mesh.clicked = false;
-        }
-        else
-        {
-            clicked_mesh.M_model_clicked = clicked_mesh.M_model;
-            clicked_mesh.bound_center_clicked << world_click.x, world_click.y, world_click.z;
-        }
-        
-
  
-    }
-    else
-    {
-        {
-            clicked_mesh.clicked = false;
-            clicked_mesh.clicked_index = 0;
-        }
-    }
 }
 
 void mesh_V_update(tri_mesh new_mesh)
@@ -847,8 +653,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             case GLFW_KEY_C:
             {
                 load_pose("../data/vertices.csv",Vector3f(0,.917,0),0.00123);
-                vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
-                vector<int> point_j{1,2,3,6,7,8,13,15,17,18,19,25,26,27};
                 
                 for(unsigned i=0; i<point_i.size(); i++)
                 {
@@ -859,16 +663,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     pose_V.col(i*2) << poses[0].coeffRef(0,point_i[i]), poses[0].coeffRef(1,point_i[i]), poses[0].coeffRef(2,point_i[i]), 1, 1, 1; 
                     pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1;
                 }
-                // cout << pose_V << endl;
+                cout << "Pose coordinates loaded" << endl;
                 pose_VBO.update(pose_V);
                 break; 
             }
             case GLFW_KEY_1:
             {                
-                vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
-                vector<int> point_j{1,2,3,6,7,8,13,15,17,18,19,25,26,27};
+
+                //for each pose keyframe
                 for(unsigned j=0; j<poses.size(); j++)
                 {
+                    //for each body part
                     for(unsigned i=0; i<point_i.size(); i++)
                     {
                         tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1);
@@ -876,12 +681,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                         point arm2 = point(poses[j].coeffRef(0,point_j[i]),poses[j].coeffRef(1,point_j[i]),poses[j].coeffRef(2,point_j[i]));
                         cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
                         meshes.push_back(cube);
+                        if(j==0)
+                        {
+                            //update mesh_V with initial pose
+                            mesh_V_update(cube);
+                        }
                     }
                 }
                 
                 cout << "All " << poses.size() << " keyframe poses loaded" << endl;
-                //update mesh_V with initial pose
-                // mesh_V_update(cube);
+                
                 //update VBO
                 mesh_VBO.update(mesh_V);
                 break;
@@ -932,146 +741,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 break;
             default:
                 break;
-        }
-        if(clicked_mesh.clicked)
-        {
-            switch (key)
-            {
-                case  GLFW_KEY_J:
-                {
-                    clicked_mesh.shader_type = 'w';
-                    
-                    meshes[clicked_mesh.clicked_index].shader_type = 'w';
-                    break;
-                }
-                case  GLFW_KEY_K:
-                {
-                    clicked_mesh.shader_type = 'f';
-                    meshes[clicked_mesh.clicked_index].shader_type = 'f';
-
-                    //vertex normals equal to face normals
-                    int insert_start = 0;
-                    for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
-                    {
-                        insert_start+= meshes[i].F.cols()*3;
-                    }
-
-                    for(unsigned i=0; i < clicked_mesh.F.cols();i++)
-                    {
-                        for(unsigned j=0; j<3;j++)
-                        {
-                            mesh_V.block(3,insert_start,3,1) = clicked_mesh.F.block(3,i,3,1);
-                            insert_start++;
-                        }
-                    }
-
-                    mesh_VBO.update(mesh_V);
-                    break;
-                }
-                case  GLFW_KEY_L:
-                {
-                    clicked_mesh.shader_type = 'p';
-                    meshes[clicked_mesh.clicked_index].shader_type = 'p';
-                    int insert_start = 0;
-                    for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
-                    {
-                        insert_start+= meshes[i].F.cols()*3;
-                    }
-
-                    //vertex normals equal to average normal of all faces
-                    for(unsigned i=0; i<clicked_mesh.F.cols();i++)
-                    {
-                        for(unsigned j=0; j<3;j++)
-                        {
-                            mesh_V.col(insert_start) << clicked_mesh.V.col((int)clicked_mesh.F.coeffRef(j,i));
-                            insert_start++;
-                        }
-                    }
-
-                    mesh_VBO.update(mesh_V);
-                    break;
-                }
-                case GLFW_KEY_SLASH:
-                {
-                    for(unsigned i = 0; i<3; i++)
-                    {
-                        meshes[clicked_mesh.clicked_index].M_model.coeffRef(i,i) = 
-                        meshes[clicked_mesh.clicked_index].M_model.coeffRef(i,i)*1.25;
-                    }
-                    break;
-                }
-                case GLFW_KEY_PERIOD:
-                {
-                    for(unsigned i = 0; i<3; i++)
-                    {
-                        meshes[clicked_mesh.clicked_index].M_model.coeffRef(i,i) = 
-                        meshes[clicked_mesh.clicked_index].M_model.coeffRef(i,i)*0.75;
-                    }
-                    break;
-                }
-                case GLFW_KEY_SEMICOLON:
-                {
-                    float radians = -10 * 3.141592f / 180;
-                    Matrix4f rotation;
-                    rotation << cos(radians), sin(radians), 0, 0,
-                    -sin(radians), cos(radians), 0, 0,
-                    0, 0, 1, 0,
-                    0, 0, 0, 1;
-                    meshes[clicked_mesh.clicked_index].M_model=rotation * meshes[clicked_mesh.clicked_index].M_model;
-
-                    break;
-                }
-                case GLFW_KEY_APOSTROPHE:
-                {
-                    float radians = 10 * 3.141592f / 180;
-                    Matrix4f rotation;
-                    rotation << cos(radians), sin(radians), 0, 0,
-                    -sin(radians), cos(radians), 0, 0,
-                    0, 0, 1, 0,
-                    0, 0, 0, 1;
-                    meshes[clicked_mesh.clicked_index].M_model=rotation * meshes[clicked_mesh.clicked_index].M_model;
-
-                    break;
-                }
-                case GLFW_KEY_DELETE:
-                {
-                    clicked_mesh.clicked = false;
-
-                    int start = 0;
-                    for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
-                    {
-                        start+= meshes[i].F.cols()*3;
-                    }
-                    for(unsigned i=0; i<clicked_mesh.F.cols()*3;i++)
-                    {
-                        removeColumn(mesh_V,start);
-                    }
-
-                    meshes.erase(meshes.begin()+clicked_mesh.clicked_index);
-                    mesh_VBO.update(mesh_V);
-                    break;
-                }
-                case GLFW_KEY_BACKSPACE:
-                {
-                    clicked_mesh.clicked = false;
-
-                    int start = 0;
-                    for(unsigned i = 0; i < clicked_mesh.clicked_index; i++)
-                    {
-                        start+= meshes[i].F.cols()*3;
-                    }
-                    for(unsigned i=0; i<clicked_mesh.F.cols()*3;i++)
-                    {
-                        removeColumn(mesh_V,start);
-                    }
-
-                    meshes.erase(meshes.begin()+clicked_mesh.clicked_index);
-                    mesh_VBO.update(mesh_V);
-                    break;
-                }
-                default:
-                    break;
-            }
         }
 
     }
@@ -1326,9 +995,6 @@ int main(void)
     // Register the keyboard callback
     glfwSetKeyCallback(window, key_callback);
 
-    //Register the mouse cursor position callback
-    glfwSetCursorPosCallback(window, cursor_position_callback);
-
     // Register the mouse callback
     glfwSetMouseButtonCallback(window, mouse_button_callback);
 
@@ -1401,7 +1067,7 @@ int main(void)
             //for each mesh
             long start = 0;
                 
-            for(unsigned i = 0; i<meshes.size(); i++)
+            for(unsigned i = 0; i<14; i++)
             {
                 M_comb = M_cam * meshes[i].M_model;
                 M_normal = M_comb.inverse().transpose();
@@ -1411,14 +1077,8 @@ int main(void)
 
                 //draw mesh elements
                 Vector3f color_gl = meshes[i].diff_color/255;
-                if(clicked_mesh.clicked && clicked_mesh.clicked_index == i)
-                {
-                    glUniform3fv(program.uniform("kd"),1, Vector3f(0,0,1).data());
-                }
-                else
-                {
-                    glUniform3fv(program.uniform("kd"),1, color_gl.data());
-                }
+
+                glUniform3fv(program.uniform("kd"),1, color_gl.data());
                 
                 glEnableVertexAttribArray(0);
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start));

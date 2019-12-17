@@ -260,7 +260,7 @@ Matrix4f cube_transform(point p1, point p2, float x_scale, float z_scale)
     rotation.row(2), 0,
     0, 0, 0, 1;
 
-    //scale/stretch cube
+    //scale/stretch cube to body part length
     Matrix4f transformation; 
     transformation << x_scale, 0, 0, 0,
     0, y_scale, 0, 0,
@@ -902,29 +902,7 @@ int main(void)
         glUniform1i(program.uniform("shaderMode"),0);
 
 
-        //tri_V and tri_VBO models the floor
-        tri_VBO.bind();
-
-        M_comb = M_cam;
-        M_normal = M_comb.inverse().transpose();
         
-        glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
-
-        //draw mesh elements
-        Vector3f color_gl(0.278,0.455,0.706);
-
-        glUniform3fv(program.uniform("kd"),1, color_gl.data());
-        
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
-
-        Vector3f ka_gl(0.15,0.15,0.15);
-        glUniform3fv(program.uniform("ka"),1, ka_gl.data());
-
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
-
-        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         
         //mesh_V and mesh_VBO models the human pose
@@ -954,6 +932,31 @@ int main(void)
             glDrawArrays(GL_TRIANGLES, 0, 504);
         }
 
+        //tri_V and tri_VBO models the floor
+        tri_VBO.bind();
+
+        M_comb = M_cam;
+        M_normal = M_comb.inverse().transpose();
+        
+        glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
+
+        //draw mesh elements
+        Vector3f color_gl(0.278,0.455,0.706);
+
+        glUniform3fv(program.uniform("kd"),1, color_gl.data());
+        
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+
+        Vector3f ka_gl(0.15,0.15,0.15);
+        glUniform3fv(program.uniform("ka"),1, ka_gl.data());
+
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        //during animation mode interpolate between frames
         if(mode == 'a')
         {
             MatrixXf mesh_interp;

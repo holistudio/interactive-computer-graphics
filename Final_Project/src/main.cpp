@@ -1086,53 +1086,26 @@ int main(void)
                 glEnableVertexAttribArray(0);
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start));
 
-                if(meshes[i].shader_type == 'p')
-                {
-                    glUniform1i(program.uniform("shaderMode"),2);
-                    Vector3f ka_gl = meshes[i].ka/255;
-                    glUniform3fv(program.uniform("ka"),1, ka_gl.data());
-                    glUniform1f(program.uniform("ks"), meshes[i].ks);
-                    glUniform1f(program.uniform("phongExp"), meshes[i].phong_exp);
+                glUniform1i(program.uniform("shaderMode"),1);
+                Vector3f ka_gl = meshes[i].ka/255;
+                glUniform3fv(program.uniform("ka"),1, ka_gl.data());
 
-                    glEnableVertexAttribArray(1);
-                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start+12));
-                }
-                else if( meshes[i].shader_type == 'f')
-                {
-                    glUniform1i(program.uniform("shaderMode"),1);
-                    Vector3f ka_gl = meshes[i].ka/255;
-                    glUniform3fv(program.uniform("ka"),1, ka_gl.data());
-
-                    glEnableVertexAttribArray(1);
-                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start+12));
-                }
-                else if (meshes[i].shader_type == 'w')
-                {
-                    glUniform1i(program.uniform("shaderMode"),0);
-                }
+                glEnableVertexAttribArray(1);
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start+12));
 
                 for(unsigned j=0; j<meshes[i].F.cols(); j++)
                 {
                     //draw triangles
-                    if(meshes[i].shader_type == 'w')
-                    {
-                        glDrawArrays(GL_LINE_LOOP,j*3,3);
-                    }
-                    else
-                    {
                         glDrawArrays(GL_TRIANGLES, j*3, 3);
 
-                    }
                     
                 }
-                if(meshes[i].shader_type == 'f')
+
+                glUniform3fv(program.uniform("kd"),1, Vector3f(1,1,1).data());
+                glUniform1i(program.uniform("shaderMode"),0);
+                for(unsigned j=0; j<meshes[i].F.cols(); j++)
                 {
-                    glUniform3fv(program.uniform("kd"),1, Vector3f(1,1,1).data());
-                    glUniform1i(program.uniform("shaderMode"),0);
-                    for(unsigned j=0; j<meshes[i].F.cols(); j++)
-                    {
-                        glDrawArrays(GL_LINE_LOOP,j*3,3);
-                    }
+                    glDrawArrays(GL_LINE_LOOP,j*3,3);
                 }
                 start+= meshes[i].F.cols()*3;
             }

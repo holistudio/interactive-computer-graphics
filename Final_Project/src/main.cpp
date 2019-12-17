@@ -590,25 +590,23 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
  
 }
 
-tri_mesh mesh_V_update(tri_mesh new_mesh, bool update_matrix)
+void mesh_V_update(tri_mesh new_mesh)
 {
     //given a new tri_mesh object, update the mesh_V containing vertices of all mesh triangles
 
     //insert mesh vertices at insert_start, which depends on existing mesh_V size
     int insert_start;
-    // if(update_matrix)
-    // {
-        if(mesh_V.cols()<2)
-        {
-            insert_start = 0;
-            mesh_V.conservativeResize(NoChange, new_mesh.F.cols()*3);
-        }
-        else
-        {
-            insert_start = mesh_V.cols(); 
-            mesh_V.conservativeResize(NoChange, mesh_V.cols()+new_mesh.F.cols()*3); 
-        }
-    // }
+
+    if(mesh_V.cols()<2)
+    {
+        insert_start = 0;
+        mesh_V.conservativeResize(NoChange, new_mesh.F.cols()*3);
+    }
+    else
+    {
+        insert_start = mesh_V.cols(); 
+        mesh_V.conservativeResize(NoChange, mesh_V.cols()+new_mesh.F.cols()*3); 
+    }
 
     //for each mesh face
     for(unsigned i=0; i < new_mesh.F.cols();i++)
@@ -627,20 +625,14 @@ tri_mesh mesh_V_update(tri_mesh new_mesh, bool update_matrix)
 
             // new_mesh.V.col((int)new_mesh.F.coeffRef(j,i)) << vertex_trans.head<3>(), normal_trans.head<3>();
 
-            // if(update_matrix)
-            // {
-                // insert mesh vertex and vertex normals into the mesh_V matrix
-                mesh_V.col(insert_start) << vertex_trans.head<3>(), 1, 1, 1;
-                // mesh_V.col(insert_start) << new_mesh.V.col((int)new_mesh.F.coeffRef(j,i));
-                
-                //vertex normals equal to face normals
-                mesh_V.block(3,insert_start,3,1) = normal_trans.head<3>();
-                insert_start++;
-            // }
+            // insert mesh vertex and vertex normals into the mesh_V matrix
+            mesh_V.col(insert_start) << vertex_trans.head<3>(), 1, 1, 1;
             
+            //vertex normals equal to face normals
+            mesh_V.block(3,insert_start,3,1) = normal_trans.head<3>();
+            insert_start++;
         }
     }
-    return new_mesh;
 }
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -704,77 +696,18 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                         point arm1 = point(poses[j].coeffRef(0,point_i[i]),poses[j].coeffRef(1,point_i[i]),poses[j].coeffRef(2,point_i[i]));
                         point arm2 = point(poses[j].coeffRef(0,point_j[i]),poses[j].coeffRef(1,point_j[i]),poses[j].coeffRef(2,point_j[i]));
                         cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
-                        
-                        int insert_start=0;
-                        // if(j==0)
-                        // {
-                        //     if(mesh_V.cols()<2) //true
-                        //     {
-                        //         insert_start = 0;
-                        //         mesh_V.conservativeResize(NoChange, cube.F.cols()*3); // 6x36
-                        //     }
-                        //     else
-                        //     {
-                        //         insert_start = mesh_V.cols(); 
-                        //         mesh_V.conservativeResize(NoChange, mesh_V.cols()+cube.F.cols()*3); 
-                        //     }
-                            
-                        // }
-                        // for(unsigned k=0; k < cube.F.cols();k++) //k=2
-                        // {
-                        //     //for each of mesh face's vertex
-                        //     for(unsigned n=0; n<3;n++) //n=0
-                        //     {
-                        //         Vector4f vertex_trans;
-                        //         Vector4f normal_trans;
-                        //         vertex_trans << cube.V.col((int)cube.F.coeffRef(n,k)).head<3>(),1;
-                        //         normal_trans << cube.F.block(3,k,3,1), 1;
-
-                        //         // cube.V.col((int)cube.F.coeffRef(n,k)) << vertex_trans.head<3>(), normal_trans.head<3>();
-                        //         // cout << cube.V.col((int)cube.F.coeffRef(l,k)) << endl;
-                        //         // cout << "---" << endl;
-
-                        //         vertex_trans = cube.M_model * vertex_trans;
-                        //         normal_trans = cube.M_model * normal_trans;
-
-                        //         cube.V.col((int)cube.F.coeffRef(n,k)) << vertex_trans.head<3>(), 1,1,1;
-                        //         cube.V.block(3,(int)cube.F.coeffRef(n,k),3,1) = normal_trans.head<3>();
-                                
-                        //         // if(j==0)
-                        //         // {
-                        //         //     // insert mesh vertex and vertex normals into the mesh_V matrix
-                        //         //     // mesh_V.col(insert_start) << cube.V.col((int)cube.F.coeffRef(n,k)); 
-                        //         //     mesh_V.col(insert_start) << vertex_trans.head<3>(), 1, 1, 1;
-                        //         //     mesh_V.block(3,insert_start,3,1) = normal_trans.head<3>();
-                        //         //     if(k==0){
-                        //         //         cout << insert_start << "," << mesh_V.col(insert_start) << endl;
-                        //         //     }
-                                    
-                        //         //     insert_start++; //7
-                        //         // }
-                        //         // cout << cube.V.col((int)cube.F.coeffRef(l,k)) << endl;
-                        //         // cout << "===" << endl;
-                        //         // if(j==0 && k==0)
-                        //         // {
-                        //         //     cout<< cube.V.col((int)cube.F.coeffRef(n,k)) << endl;
-                        //         // }
-                        //     }
-                        // }
-                        
+                    
+                        //update mesh_V
                         if(j==0)
                         {
-                            //update mesh_V with initial pose
-                            cube = mesh_V_update(cube,true);
+                            mesh_V_update(cube);
                         }
-                        // else{
-                        //     cube = mesh_V_update(cube,false);
-                        // }
                         meshes.push_back(cube);
                     }
                 }
                 
                 cout << "All " << poses.size() << " keyframe poses loaded" << endl;
-                cout << mesh_V.cols() <<endl;
+                // cout << mesh_V.cols() <<endl;
                 //update VBO
                 mesh_VBO.update(mesh_V);
                 break;

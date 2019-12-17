@@ -680,7 +680,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1;
                 }
                 cout << "Pose coordinates loaded" << endl;
-                pose_VBO.update(pose_V);
+                // pose_VBO.update(pose_V);
                 break; 
             }
             case GLFW_KEY_1:
@@ -1012,15 +1012,15 @@ int main(void)
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
         glDrawArrays(GL_LINES,0,line_V.cols());
 
-        if(pose_V.cols()>1)
-        {
-            pose_VBO.bind();
-            glEnableVertexAttribArray(0);
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
-            glEnableVertexAttribArray(1);
-            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
-            glDrawArrays(GL_LINES,0,pose_V.cols());
-        }
+        // if(pose_V.cols()>1)
+        // {
+        //     pose_VBO.bind();
+        //     glEnableVertexAttribArray(0);
+        //     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+        //     glEnableVertexAttribArray(1);
+        //     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
+        //     glDrawArrays(GL_LINES,0,pose_V.cols());
+        // }
         // Bind program
         program.bind();
 

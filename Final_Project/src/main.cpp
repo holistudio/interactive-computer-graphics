@@ -104,7 +104,7 @@ vector<tri_mesh> meshes;
 // Number of animation keyframes
 int num_keyframes = 0;
 // Time step between animation key frames
-float time_step = 1.0; 
+float time_step = 1; 
 // Variable for recording when the animation starts
 chrono::time_point<chrono::high_resolution_clock> t_start;
 
@@ -211,6 +211,7 @@ void load_pose(string csv_filepath, Vector3f position, float scale)
     {
         while(getline(in,line))
         {
+            //Matrix of vertices of poses detected by Pose_3D
             MatrixXf vertices(3,1);
             unsigned i = 0;
             substrings = comma_sep_string(line);
@@ -548,6 +549,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 // The following code is for rendering the lines of the pose skeleton
                 for(unsigned i=0; i<point_i.size(); i++)
                 {
+                    //for each pair of points (point_i and point_j)
+                    //add vertex coordinates to the pose_V matrix
                     if(i>0)
                     {
                         pose_V.conservativeResize(6,pose_V.cols()+2);
@@ -565,12 +568,22 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 
                 cout << "Pose coordinates loaded" << endl;
 
+                int ins = 0;
                 //for each pose keyframe
                 for(unsigned j=0; j<poses.size(); j++) //j=0
                 {
                     //for each body part
                     for(unsigned i=0; i<point_i.size(); i++) //i=0
                     {
+                        //for each pair of points (point_i and point_j)
+                        //add vertex coordinates to the pose_V matrix
+                        if(ins>0)
+                        {
+                            pose_V.conservativeResize(6,pose_V.cols()+2);
+                        }
+                        pose_V.col(ins) << poses[j].coeffRef(0,point_i[i]), poses[j].coeffRef(1,point_i[i]), poses[j].coeffRef(2,point_i[i]), 1, 1, 1; 
+                        pose_V.col(ins+1) << poses[j].coeffRef(0,point_j[i]), poses[j].coeffRef(1,point_j[i]), poses[j].coeffRef(2,point_j[i]), 1, 1, 1;
+                        ins = ins+2;
                         tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1); //cube V=8 F=12
                         point arm1 = point(poses[j].coeffRef(0,point_i[i]),poses[j].coeffRef(1,point_i[i]),poses[j].coeffRef(2,point_i[i]));
                         point arm2 = point(poses[j].coeffRef(0,point_j[i]),poses[j].coeffRef(1,point_j[i]),poses[j].coeffRef(2,point_j[i]));
@@ -585,15 +598,20 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                         }
                     
                         //update mesh_V
-                        mesh_V_update(cube);
-                        meshes.push_back(cube);
+                        if(j==0)
+                        {
+                            mesh_V_update(cube);
+                            mesh_VBO.update(mesh_V);
+                            meshes.push_back(cube);
+                        }
+                        
                     }
                 }
                 
                 cout << "All " << poses.size() << " keyframe poses loaded" << endl;
                 // cout << mesh_V.cols() <<endl;
                 //update VBO
-                mesh_VBO.update(mesh_V.block(0,0,6,504));
+                // mesh_VBO.update(mesh_V.block(0,0,6,504));
                 break;
             }
             case  GLFW_KEY_SLASH:
@@ -967,11 +985,52 @@ int main(void)
         //during animation mode interpolate between frames
         if(mode == 'a')
         {
-            MatrixXf mesh_interp;
-            mesh_interp.resize(6,504);
+            // MatrixXf mesh_interp;
+            // mesh_interp.resize(6,504);
             // track time elapsed since animation start
             auto t_now = std::chrono::high_resolution_clock::now();
             float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
+
+            // if(time > 0)
+            // {
+            //     //for each frame
+            //     // if it's not the end of the animation
+            //     if(ceil(time/time_step)<num_keyframes)
+            //     {
+            //         int ins = 0;
+            //         //for each vertex
+            //         for (unsigned i = 0; i<504; i++)
+            //         {
+            //             // keyframe pairs at time 
+            //             int k_0 = floor(time / time_step);
+            //             int k_1 = ceil(time / time_step);
+
+            //             float t_0 = float(k_0) * time_step;
+                         
+            //             //same body part mesh in two different keyframe poses
+            //             // tri_mesh part_0 = meshes[k_0*point_i.size()];
+            //             // tri_mesh part_1 = meshes[k_1*point_i.size()];
+
+            //             //interpolate between vertices of body part in the two different keyframe poses
+                        
+            //             for(unsigned j=0; j < mesh_interp.cols();j++)
+            //             {
+            //                 VectorXf v_0_col(6,1);
+            //                 v_0_col = mesh_V.col(k_0*504+j);
+            //                 VectorXf v_1_col(6,1);
+            //                 v_1_col = mesh_V.col(k_1*504+j);
+            //                 mesh_interp.col(j) << v_0_col + ((time-t_0)/(time_step)) * (v_1_col - v_0_col)/(time_step);
+            //             }
+            //         }
+            //         mesh_VBO.update(mesh_interp);
+            //     }
+            //     else
+            //     {
+            //         t_start = t_now;
+            //     }
+            // }
+            MatrixXf pose_interp;
+            pose_interp.resize(6,28);
 
             if(time > 0)
             {
@@ -979,32 +1038,60 @@ int main(void)
                 // if it's not the end of the animation
                 if(ceil(time/time_step)<num_keyframes)
                 {
-                    int ins = 0;
-                    //for each vertex
-                    for (unsigned i = 0; i<504; i++)
+                    int k_0 = floor(time / time_step);
+                    int k_1 = ceil(time / time_step);
+                    float t_0 = float(k_0) * time_step;
+                    // for each pose skeleton point, interpolate between keyframes
+                    for (unsigned i = 0; i<28; i++)
                     {
-                        // keyframe pairs at time 
-                        int k_0 = floor(time / time_step);
-                        int k_1 = ceil(time / time_step);
-
-                        float t_0 = float(k_0) * time_step;
-                         
-                        //same body part mesh in two different keyframe poses
-                        // tri_mesh part_0 = meshes[k_0*point_i.size()];
-                        // tri_mesh part_1 = meshes[k_1*point_i.size()];
-
-                        //interpolate between vertices of body part in the two different keyframe poses
+                        VectorXf v_0_col(6,1);
+                        v_0_col = pose_V.col(k_0*28+i);
+                        VectorXf v_1_col(6,1);
+                        v_1_col = pose_V.col(k_1*28+i);
+                        pose_interp.col(i) << v_0_col + ((time-t_0)/(time_step)) * (v_1_col - v_0_col)/(time_step);
+                    }
+                    int insert_start = 0;
+                    //for each body part
+                    for(unsigned i=0; i<point_i.size(); i++)
+                    {
+                        tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1);
+                        point arm1 = point(pose_interp.coeffRef(0,i*2),pose_interp.coeffRef(1,i*2),pose_interp.coeffRef(2,i*2));
+                        point arm2 = point(pose_interp.coeffRef(0,i*2+1),pose_interp.coeffRef(1,i*2+1),pose_interp.coeffRef(2,i*2+1));
                         
-                        for(unsigned j=0; j < mesh_interp.cols();j++)
+                        if(i==6)
                         {
-                            VectorXf v_0_col(6,1);
-                            v_0_col = mesh_V.col(k_0*504+j);
-                            VectorXf v_1_col(6,1);
-                            v_1_col = mesh_V.col(k_1*504+j);
-                            mesh_interp.col(j) << v_0_col + ((time-t_0)/(time_step)) * (v_1_col - v_0_col)/(time_step);
+                            cube.M_model = cube_transform(arm1,arm2,0.1,0.1)*cube.M_model;
+                        }
+                        else
+                        {
+                            cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
+                        }
+                    
+                        //update mesh_V
+                        for(unsigned i=0; i < cube.F.cols();i++)
+                        {
+                            //for each of mesh face's vertex
+                            for(unsigned j=0; j<3;j++)
+                            {
+                                //transform vertex based on model Matrix
+                                Vector4f vertex_trans;
+                                Vector4f normal_trans;
+                                vertex_trans << cube.V.col((int)cube.F.coeffRef(j,i)).head<3>(),1;
+                                normal_trans << cube.F.block(3,i,3,1), 1;
+
+                                vertex_trans = cube.M_model * vertex_trans;
+                                normal_trans = cube.M_model * normal_trans;
+
+                                // insert mesh vertex and vertex normals into the mesh_V matrix
+                                mesh_V.col(insert_start) << vertex_trans.head<3>(), 1, 1, 1;
+                                
+                                //vertex normals equal to face normals
+                                mesh_V.block(3,insert_start,3,1) = normal_trans.head<3>();
+                                insert_start++;
+                            }
                         }
                     }
-                    mesh_VBO.update(mesh_interp);
+                    mesh_VBO.update(mesh_V);
                 }
                 else
                 {

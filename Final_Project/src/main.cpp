@@ -51,7 +51,7 @@ Vector3f eye_pos(0,0,3);
 
 // Contains the vertex positions of the lines and triangles
 MatrixXf line_V(6,1);
-MatrixXf tri_V(5,1);
+MatrixXf tri_V(6,1);
 MatrixXf mesh_V(6,1);
 
 // variables for tracking which mode the drawing application is in
@@ -634,6 +634,41 @@ void mesh_V_update(tri_mesh new_mesh)
         }
     }
 }
+
+void tri_V_update(tri_mesh new_mesh)
+{
+    //given a new tri_mesh object, update the tri_V containing vertices of all mesh triangles
+
+    //insert mesh vertices at insert_start, which depends on existing tri_V size
+    int insert_start;
+
+    if(tri_V.cols()<2)
+    {
+        insert_start = 0;
+        tri_V.conservativeResize(NoChange, new_mesh.F.cols()*3);
+    }
+    else
+    {
+        insert_start = tri_V.cols(); 
+        tri_V.conservativeResize(NoChange, tri_V.cols()+new_mesh.F.cols()*3); 
+    }
+
+    //for each mesh face
+    for(unsigned i=0; i < new_mesh.F.cols();i++)
+    {
+        //for each of mesh face's vertex
+        for(unsigned j=0; j<3;j++)
+        {
+            // insert mesh vertex and vertex normals into the tri_V matrix
+            tri_V.col(insert_start) << new_mesh.V.col((int)new_mesh.F.coeffRef(j,i));
+            
+            //vertex normals equal to face normals
+            tri_V.block(3,insert_start,3,1) = -new_mesh.F.block(3,i,3,1);
+            insert_start++;
+        }
+    }
+}
+
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     //only perform action on key press, not key release
@@ -837,8 +872,14 @@ int main(void)
 
     line_VBO.update(line_V);
 
+    //load floor
     tri_VBO.init();
-    tri_V.resize(5,1);
+    tri_V.resize(6,1);
+
+    tri_mesh floor_mesh = load_mesh("../data/ground_plane.off",Vector3f(0,0,0),1.0);
+    tri_V_update(floor_mesh);
+
+    cout<<tri_V<<endl;
     tri_VBO.update(tri_V);
 
     mesh_VBO.init();
@@ -1051,7 +1092,28 @@ int main(void)
 
         glUniform1i(program.uniform("shaderMode"),0);
 
+        tri_VBO.bind();
 
+        M_comb = M_cam;
+        M_normal = M_comb.inverse().transpose();
+        
+        glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
+
+        //draw mesh elements
+        Vector3f color_gl(0.278,0.455,0.706);
+
+        glUniform3fv(program.uniform("kd"),1, color_gl.data());
+        
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+
+        Vector3f ka_gl(0.15,0.15,0.15);
+        glUniform3fv(program.uniform("ka"),1, ka_gl.data());
+
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         if(mesh_V.cols()>1)
         {

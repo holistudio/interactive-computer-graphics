@@ -695,7 +695,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                         tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1); //cube V=8 F=12
                         point arm1 = point(poses[j].coeffRef(0,point_i[i]),poses[j].coeffRef(1,point_i[i]),poses[j].coeffRef(2,point_i[i]));
                         point arm2 = point(poses[j].coeffRef(0,point_j[i]),poses[j].coeffRef(1,point_j[i]),poses[j].coeffRef(2,point_j[i]));
-                        cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
+                        
+                        if(i==6)
+                        {
+                            cube.M_model = cube_transform(arm1,arm2,0.1,0.1)*cube.M_model;
+                        }
+                        else
+                        {
+                            cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
+                        }
                     
                         //update mesh_V
                         mesh_V_update(cube);
@@ -775,7 +783,7 @@ int main(void)
     #endif
 
     // Create a windowed mode window and its OpenGL context
-    window = glfwCreateWindow(640, 480, "Triangles!", NULL, NULL);
+    window = glfwCreateWindow(640, 480, "Wushu!", NULL, NULL);
     if (!window)
     {
         glfwTerminate();

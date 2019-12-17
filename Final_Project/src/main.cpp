@@ -335,15 +335,24 @@ Matrix4f cube_transform(point p1, point p2, float x_scale, float z_scale)
     rotation.row(2), 0,
     0, 0, 0, 1;
 
-    // cout << rotation_h << endl;
-
+    //scale/stretch cube
     Matrix4f transformation; 
-    transformation << x_scale, 0, 0, p1.x,
-    0, y_scale, 0, p1.y,
-    0, 0, z_scale, p1.z,
+    transformation << x_scale, 0, 0, 0,
+    0, y_scale, 0, 0,
+    0, 0, z_scale, 0,
     0, 0, 0, 1;
 
-    transformation = transformation * rotation_h;
+    //rotate stretched cube
+    transformation = rotation_h * transformation;
+
+    //translate stretched cube
+    Matrix4f translate;
+    translate << 1, 0, 0, p1.x,
+    0, 1, 0, p1.y,
+    0, 0, 1, p1.z,
+    0, 0, 0, 1;
+
+    transformation = translate * transformation;
 
     return transformation;
 }
@@ -857,12 +866,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             }
             case GLFW_KEY_1:
             {                
-                tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1);
-                point arm1 = point(poses[0].coeffRef(0,25),poses[0].coeffRef(1,25),poses[0].coeffRef(2,25));
-                point arm2 = point(poses[0].coeffRef(0,26),poses[0].coeffRef(1,26),poses[0].coeffRef(2,26));
-                cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
-                meshes.push_back(cube);
-                mesh_V_update(cube);
+                vector<int> point_i{0,1,2,0,6,7, 0,13,13,17,18,13,25,26};
+                vector<int> point_j{1,2,3,6,7,8,13,15,17,18,19,25,26,27};
+                for(unsigned i=0; i<point_i.size(); i++)
+                {
+                    tri_mesh cube = load_mesh("../data/cube.off",Vector3f(0,0,0),1);
+                    point arm1 = point(poses[0].coeffRef(0,point_i[i]),poses[0].coeffRef(1,point_i[i]),poses[0].coeffRef(2,point_i[i]));
+                    point arm2 = point(poses[0].coeffRef(0,point_j[i]),poses[0].coeffRef(1,point_j[i]),poses[0].coeffRef(2,point_j[i]));
+                    cube.M_model = cube_transform(arm1,arm2,0.05,0.05)*cube.M_model;
+                    meshes.push_back(cube);
+                    mesh_V_update(cube);
+                }
                 
                 //update VBO
                 mesh_VBO.update(mesh_V);

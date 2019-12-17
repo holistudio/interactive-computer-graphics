@@ -595,6 +595,9 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 void mesh_V_update(tri_mesh new_mesh)
 {
+    //given a new tri_mesh object, update the mesh_V containing vertices of all mesh triangles
+
+    //insert mesh vertices at insert_start, which depends on existing mesh_V size
     int insert_start;
     if(mesh_V.cols()<2)
     {
@@ -607,11 +610,13 @@ void mesh_V_update(tri_mesh new_mesh)
         mesh_V.conservativeResize(NoChange, mesh_V.cols()+new_mesh.F.cols()*3); 
     }
 
-    
+    //for each mesh face
     for(unsigned i=0; i < new_mesh.F.cols();i++)
     {
+        //for each of mesh face's vertex
         for(unsigned j=0; j<3;j++)
         {
+            //insert mesh vertex and vertex normals into the mesh_V matrix
             mesh_V.col(insert_start) << new_mesh.V.col((int)new_mesh.F.coeffRef(j,i));
             //vertex normals equal to face normals
             mesh_V.block(3,insert_start,3,1) = new_mesh.F.block(3,i,3,1);

@@ -908,6 +908,8 @@ int main(void)
 
         glUniform1i(program.uniform("shaderMode"),0);
 
+
+        //tri_V and tri_VBO models the floor
         tri_VBO.bind();
 
         M_comb = M_cam;
@@ -931,38 +933,32 @@ int main(void)
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
+        
+        //mesh_V and mesh_VBO models the human pose
         if(mesh_V.cols()>1)
         {
             mesh_VBO.bind();
-            //for each mesh
-            // long start = 0;
-                
-            // for(unsigned i = 0; i<point_i.size(); i++)
-            // {
-                
-                M_comb = M_cam;
-                M_normal = M_comb.inverse().transpose();
-                
-                glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
 
-                //draw mesh elements
-                Vector3f color_gl(1,1,1);
+            M_comb = M_cam;
+            M_normal = M_comb.inverse().transpose();
+            
+            glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
 
-                glUniform3fv(program.uniform("kd"),1, color_gl.data());
-                
-                glEnableVertexAttribArray(0);
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+            //draw mesh elements
+            Vector3f color_gl(1,1,1);
 
-                Vector3f ka_gl(0.15,0.15,0.15);
-                glUniform3fv(program.uniform("ka"),1, ka_gl.data());
+            glUniform3fv(program.uniform("kd"),1, color_gl.data());
+            
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
 
-                glEnableVertexAttribArray(1);
-                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
+            Vector3f ka_gl(0.15,0.15,0.15);
+            glUniform3fv(program.uniform("ka"),1, ka_gl.data());
 
-                glDrawArrays(GL_TRIANGLES, 0, 504);
-                // start+= meshes[i].F.cols()*3;
-            // }
-  
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
+
+            glDrawArrays(GL_TRIANGLES, 0, 504);
         }
 
         if(mode == 'a')

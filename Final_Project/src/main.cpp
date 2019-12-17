@@ -934,7 +934,6 @@ int main(void)
                     "uniform mat4 projMatrix;"
                     "uniform mat4 camMatrix;"
                     "uniform mat4 normalMatrix;"
-                    "uniform int shaderMode;"
                     "uniform mat2 scale;"
                     "uniform vec2 translation;"
                     "uniform vec3 lightPosition;"
@@ -954,7 +953,6 @@ int main(void)
                     "in vec3 halfVec;"
                     "in vec3 lightDir;"
                     "uniform vec3 lightIntensity;"
-                    "uniform int shaderMode;"
                     "uniform vec3 Ia;"
                     "uniform vec3 ka;"
                     "uniform vec3 kd;"
@@ -1050,10 +1048,10 @@ int main(void)
         {
             mesh_VBO.bind();
             //for each mesh
-            long start = 0;
+            // long start = 0;
                 
-            for(unsigned i = 0; i<point_i.size(); i++)
-            {
+            // for(unsigned i = 0; i<point_i.size(); i++)
+            // {
                 
                 M_comb = M_cam;
                 M_normal = M_comb.inverse().transpose();
@@ -1061,36 +1059,22 @@ int main(void)
                 glUniformMatrix4fv(program.uniform("normalMatrix"),1, GL_FALSE, M_normal.data());
 
                 //draw mesh elements
-                Vector3f color_gl = meshes[i].diff_color/255;
+                Vector3f color_gl(1,1,1);
 
                 glUniform3fv(program.uniform("kd"),1, color_gl.data());
                 
                 glEnableVertexAttribArray(0);
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start));
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
 
-                glUniform1i(program.uniform("shaderMode"),1);
-                Vector3f ka_gl = meshes[i].ka/255;
+                Vector3f ka_gl(0.15,0.15,0.15);
                 glUniform3fv(program.uniform("ka"),1, ka_gl.data());
 
                 glEnableVertexAttribArray(1);
-                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(24*start+12));
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (const GLvoid *)(12));
 
-                for(unsigned j=0; j<meshes[i].F.cols(); j++)
-                {
-                    //draw triangles
-                        glDrawArrays(GL_TRIANGLES, j*3, 3);
-
-                    
-                }
-
-                glUniform3fv(program.uniform("kd"),1, Vector3f(1,1,1).data());
-                glUniform1i(program.uniform("shaderMode"),0);
-                for(unsigned j=0; j<meshes[i].F.cols(); j++)
-                {
-                    glDrawArrays(GL_LINE_LOOP,j*3,3);
-                }
-                start+= meshes[i].F.cols()*3;
-            }
+                glDrawArrays(GL_TRIANGLES, 0, mesh_V.cols());
+                // start+= meshes[i].F.cols()*3;
+            // }
   
         }
 

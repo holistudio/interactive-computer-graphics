@@ -707,7 +707,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 M_proj= M_orth;
                 break; 
             }
-            case GLFW_KEY_C:
+            case GLFW_KEY_1:
             {
                 load_pose("../data/vertices.csv",Vector3f(0,.917,0),0.00123);
                 num_keyframes = poses.size();
@@ -722,11 +722,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                     pose_V.col(2*i+1) << poses[0].coeffRef(0,point_j[i]), poses[0].coeffRef(1,point_j[i]), poses[0].coeffRef(2,point_j[i]), 1, 1, 1;
                 }
                 cout << "Pose coordinates loaded" << endl;
-                // pose_VBO.update(pose_V);
-                break; 
-            }
-            case GLFW_KEY_1:
-            {
 
                 //for each pose keyframe
                 for(unsigned j=0; j<poses.size(); j++) //j=0

@@ -104,7 +104,7 @@ vector<tri_mesh> meshes;
 // Number of animation keyframes
 int num_keyframes = 0;
 // Time step between animation key frames
-float time_step = 1; 
+float time_step = 0.066; 
 // Variable for recording when the animation starts
 chrono::time_point<chrono::high_resolution_clock> t_start;
 
@@ -1048,7 +1048,7 @@ int main(void)
                         v_0_col = pose_V.col(k_0*28+i);
                         VectorXf v_1_col(6,1);
                         v_1_col = pose_V.col(k_1*28+i);
-                        pose_interp.col(i) << v_0_col + ((time-t_0)/(time_step)) * (v_1_col - v_0_col)/(time_step);
+                        pose_interp.col(i) << v_0_col + ((time-t_0)/(time_step)) * (v_1_col - v_0_col);
                     }
                     int insert_start = 0;
                     //for each body part

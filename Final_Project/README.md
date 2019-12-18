@@ -4,7 +4,7 @@ Using C++ and OpenGL, this program allows for a user to insert and animate mesh 
 
 <img src="img/pipeline-01.png" width="500">
 
-Full results visualizations can be found [here](https://vimeo.com/380161358).
+The resulting program allows for the 3D pose estimation results to be viewed...well in 3D! From any angle! Compared to the default plots from the original deep learning algorithm, viewing the 3D poses from any perspective enables us to more fully evaluate the estimation vs reality. Full results visualizations can be found [here](https://vimeo.com/380161358).
 
 ## Demo / Getting Started
 
@@ -58,4 +58,4 @@ The current version of the code generates meshes around the 3D pose skeletons in
 
 <img src="img/mesh_make-01.png" width="500">
 
-Meshes are then visualized in OpenGL. Future development of the code will look at fancier means of generating mesh around the 3D pose skeletons like MD5 and FBX files.
+Meshes are then visualized in OpenGL. Future development of the code will look at fancier means of generating meshes around the 3D pose skeletons like MD5 and FBX files.

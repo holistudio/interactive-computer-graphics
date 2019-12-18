@@ -1,4 +1,4 @@
-# Rendering Meshes with OpenGL
+# 3D Human Pose Estimates Visualized with Generated Meshes
 
 Using C++ and OpenGL, this program allows for a user to insert and animate mesh model based on 3D human pose data. This project builds off of earlier human pose estimation work [here](https://github.com/holistudio/nomocap). The full "pipeline" of data and visualization can be illustrated as follows:
 

@@ -4,7 +4,7 @@ Using C++ and OpenGL, this program allows for a user to insert and animate mesh 
 
 <img src="img/pipeline-01.png" width="500">
 
-Full results visualizations can be found [here](https://vimeo.com/380161358)
+Full results visualizations can be found [here](https://vimeo.com/380161358).
 
 ## Demo / Getting Started
 
@@ -25,8 +25,6 @@ To compile the code:
 make
 ./Final_Project_bin
 ```
-
-If only changes are made to the files, only the last two lines of terminal commands are needed. If you ever add files, of course you'll need to `cmake ../` again.
 
 ### OK it's running...
 
